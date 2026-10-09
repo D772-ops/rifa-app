@@ -26,8 +26,14 @@ function loadEnv(){
 }
 loadEnv();
 
+// Zona horaria del negocio (Colombia por defecto). Es CLAVE: define cuándo
+// cambia el "día" de la rifa y a qué hora real es el sorteo. Sin esto, en un
+// servidor en el extranjero (UTC) el tablero se reiniciaría y las reservas se
+// liberarían a horas equivocadas. Puedes cambiarla con la variable TZ.
+process.env.TZ = process.env.TZ || 'America/Bogota';
+
 const PORT = process.env.PORT || 3000;
-const PUBLIC_URL = (process.env.PUBLIC_URL || ('http://localhost:'+PORT)).replace(/\/$/,'');
+const PUBLIC_URL = (process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || ('http://localhost:'+PORT)).replace(/\/$/,'');
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin';
 const MP_TOKEN = process.env.MP_ACCESS_TOKEN || '';
 
@@ -40,11 +46,19 @@ function blankNumbers(){ const o={}; for(let i=0;i<100;i++) o[pad(i)]={status:'a
 function freshDB(){
   return {
     cfg:{
-      raffleName: process.env.RAFFLE_NAME || 'Rifa Diaria',
+      raffleName: process.env.RAFFLE_NAME || 'DREAMS RIFA',
+      slogan: process.env.SLOGAN || 'La suerte tambien se gana',
       currency: process.env.CURRENCY || 'COP',
       price: Number(process.env.PRICE || 5000),
       drawTime: process.env.DRAW_TIME || '20:00',
-      releaseMinutes: Number(process.env.RELEASE_MINUTES || 60),
+      releaseMinutes: Number(process.env.RELEASE_MINUTES || 0),
+      // Premios (editables desde /admin). El primero es el premio mayor.
+      prizes: [
+        { label:'Ultimas dos cifras', amount:1400000, enabled:true },
+        { label:'Primeras dos cifras', amount:100000, enabled:true },
+        { label:'Cifras del medio', amount:100000, enabled:true },
+        { label:'Cifras de union (primera y ultima)', amount:100000, enabled:true }
+      ],
       // Pago por Bre-B / Nequi (QR + llave). Se configura desde /admin.
       breb:{
         enabled:false,
@@ -64,6 +78,13 @@ function freshDB(){
 let db = fs.existsSync(DB_FILE) ? JSON.parse(fs.readFileSync(DB_FILE,'utf8')) : freshDB();
 if(!db.cfg) db = freshDB();
 if(!db.cfg.breb) db.cfg.breb = { enabled:false, llave:'', beneficiary:'', business:'', qrImage:'', requireReceipt:false };
+if(db.cfg.slogan==null) db.cfg.slogan = 'La suerte tambien se gana';
+if(!Array.isArray(db.cfg.prizes)) db.cfg.prizes = [
+  { label:'Ultimas dos cifras', amount:1400000, enabled:true },
+  { label:'Primeras dos cifras', amount:100000, enabled:true },
+  { label:'Cifras del medio', amount:100000, enabled:true },
+  { label:'Cifras de union (primera y ultima)', amount:100000, enabled:true }
+];
 let saveTimer=null;
 function save(){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>fs.writeFileSync(DB_FILE, JSON.stringify(db,null,2)),120); }
 save();
@@ -94,9 +115,13 @@ function archiveDay(){
 // NO libera las que el cliente ya marco "Ya transferi" (claimed): esas esperan
 // la confirmacion manual del administrador.
 function autoRelease(){
+  const rel = db.cfg.releaseMinutes||0;
+  if(rel<=0) return 0;                 // 0 = NUNCA liberar automáticamente (las reservas se mantienen)
   const dm = hmToMin(db.cfg.drawTime);
   if(dm==null) return 0;
-  if(nowMin() < dm - (db.cfg.releaseMinutes||0)) return 0;
+  if(nowMin() < dm - rel) return 0;
+  // Solo liberar dentro de la ventana [sorteo-rel, sorteo]; no después del sorteo.
+  if(nowMin() > dm) return 0;
   let freed=0;
   for(const k in db.numbers){
     const n=db.numbers[k];
@@ -160,8 +185,10 @@ function publicState(){
   const dm=hmToMin(db.cfg.drawTime);
   const b=db.cfg.breb||{};
   return {
-    cfg:{ raffleName:db.cfg.raffleName, currency:db.cfg.currency, price:db.cfg.price,
+    cfg:{ raffleName:db.cfg.raffleName, slogan:db.cfg.slogan, currency:db.cfg.currency, price:db.cfg.price,
           drawTime:db.cfg.drawTime, releaseMinutes:db.cfg.releaseMinutes,
+          prizes:(Array.isArray(db.cfg.prizes)?db.cfg.prizes:[]).filter(p=>p&&p.enabled)
+                   .map(p=>({label:p.label,amount:p.amount})),
           releaseAt: dm==null?null:((dm-(db.cfg.releaseMinutes||0)+1440)%1440),
           breb: (b.enabled ? { enabled:true, llave:b.llave, beneficiary:b.beneficiary,
                  business:b.business, qrImage:b.qrImage, requireReceipt:!!b.requireReceipt } : {enabled:false}) },
@@ -299,6 +326,14 @@ app.post('/api/admin/reserve', auth, (req,res)=>{
 app.post('/api/admin/config', auth, (req,res)=>{
   const b=req.body;
   db.cfg.raffleName = (b.raffleName||db.cfg.raffleName).slice(0,60);
+  if(b.slogan!=null) db.cfg.slogan = String(b.slogan).slice(0,120);
+  if(Array.isArray(b.prizes)){
+    db.cfg.prizes = b.prizes.slice(0,4).map(p=>({
+      label: String((p&&p.label)||'').slice(0,60),
+      amount: Number((p&&p.amount)||0)||0,
+      enabled: !!(p&&p.enabled)
+    }));
+  }
   if(b.price!=null) db.cfg.price = Number(b.price)||0;
   if(b.currency) db.cfg.currency = b.currency.slice(0,6);
   if(b.drawTime) db.cfg.drawTime = b.drawTime;
@@ -340,9 +375,8 @@ app.post('/api/admin/new-day', auth, (req,res)=>{
 });
 
 /* ---------- Vistas estaticas ---------- */
-app.get('/', (req,res)=> res.sendFile(path.join(__dirname,'public','index.html')));
-app.get('/admin', (req,res)=> res.sendFile(path.join(__dirname,'public','admin.html')));
-app.use(express.static(path.join(__dirname,'public')));
+app.get('/', (req,res)=> res.sendFile(path.join(__dirname,'index.html')));
+app.get('/admin', (req,res)=> res.sendFile(path.join(__dirname,'admin.html')));
 
 app.listen(PORT, '0.0.0.0', ()=>{
   console.log('Rifa Diaria corriendo en puerto '+PORT);
