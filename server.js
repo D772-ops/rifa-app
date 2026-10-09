@@ -375,8 +375,18 @@ app.post('/api/admin/new-day', auth, (req,res)=>{
 });
 
 /* ---------- Vistas estaticas ---------- */
-app.get('/', (req,res)=> res.sendFile(path.join(__dirname,'index.html')));
-app.get('/admin', (req,res)=> res.sendFile(path.join(__dirname,'admin.html')));
+// Busca un archivo primero en la raiz y luego en /public (soporta ambas estructuras)
+function resolvePage(name){
+  const root = path.join(__dirname, name);
+  const pub  = path.join(__dirname, 'public', name);
+  if (fs.existsSync(root)) return root;
+  if (fs.existsSync(pub))  return pub;
+  return root;
+}
+// Sirve archivos estaticos desde /public y desde la raiz, si existen
+try { if (fs.existsSync(path.join(__dirname,'public'))) app.use(express.static(path.join(__dirname,'public'))); } catch(e){}
+app.get('/', (req,res)=> res.sendFile(resolvePage('index.html')));
+app.get('/admin', (req,res)=> res.sendFile(resolvePage('admin.html')));
 
 app.listen(PORT, '0.0.0.0', ()=>{
   console.log('Rifa Diaria corriendo en puerto '+PORT);
