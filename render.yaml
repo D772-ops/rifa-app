@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: rifa-diaria
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_VERSION
+        value: "18"
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: MP_ACCESS_TOKEN
+        sync: false
