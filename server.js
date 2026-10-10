@@ -75,19 +75,65 @@ function freshDB(){
     history: []
   };
 }
+// ---- Guardado en la nube GRATIS (JSONBin) para que los datos NO se borren ----
+// Si pones JSONBIN_BIN_ID y JSONBIN_KEY en las variables de entorno de Render,
+// la informacion (configuracion, reservas, pagos, historial) se guarda en la
+// nube gratis y sobrevive a los reinicios/dormidas del plan gratuito.
+// Si no las pones, el servidor sigue funcionando usando solo el archivo local.
+const RB_BIN = (process.env.JSONBIN_BIN_ID||'').trim();
+const RB_KEY = (process.env.JSONBIN_KEY||'').trim();
+const USE_REMOTE = !!(RB_BIN && RB_KEY);
+const RB_URL = 'https://api.jsonbin.io/v3/b/' + RB_BIN;
+
+async function remoteLoad(){
+  if(!USE_REMOTE) return null;
+  try{
+    const r = await fetch(RB_URL+'/latest', { headers:{ 'X-Master-Key':RB_KEY } });
+    if(!r.ok) return null;
+    const data = await r.json();
+    const rec = (data && data.record!==undefined) ? data.record : data;
+    return (rec && rec.cfg) ? rec : null;
+  }catch(e){ console.error('[nube] no se pudo leer:', e.message); return null; }
+}
+// Version liviana para la nube: quita los comprobantes (imagenes pesadas) que
+// no necesitan sobrevivir a un reinicio, para no llenar el almacenamiento.
+function slimForRemote(){
+  const c = JSON.parse(JSON.stringify(db));
+  if(c.numbers) for(const k in c.numbers){ if(c.numbers[k]) delete c.numbers[k].receipt; }
+  if(Array.isArray(c.history)) c.history.forEach(h=>{ if(h&&h.participants) h.participants.forEach(p=>{ if(p) delete p.receipt; }); });
+  return c;
+}
+async function remotePut(){
+  if(!USE_REMOTE) return;
+  try{
+    await fetch(RB_URL, { method:'PUT',
+      headers:{ 'Content-Type':'application/json', 'X-Master-Key':RB_KEY },
+      body: JSON.stringify(slimForRemote()) });
+  }catch(e){ console.error('[nube] no se pudo guardar:', e.message); }
+}
+function normalizeDB(){
+  if(!db || !db.cfg) db = freshDB();
+  if(!db.cfg.breb) db.cfg.breb = { enabled:false, llave:'', beneficiary:'', business:'', qrImage:'', requireReceipt:false };
+  if(db.cfg.slogan==null) db.cfg.slogan = 'La suerte tambien se gana';
+  if(!Array.isArray(db.cfg.prizes)) db.cfg.prizes = [
+    { label:'Ultimas dos cifras', amount:1400000, enabled:true },
+    { label:'Primeras dos cifras', amount:100000, enabled:true },
+    { label:'Cifras del medio', amount:100000, enabled:true },
+    { label:'Cifras de union (primera y ultima)', amount:100000, enabled:true }
+  ];
+  if(!db.numbers) db.numbers = blankNumbers();
+  if(!db.date) db.date = today();
+  if(!Array.isArray(db.history)) db.history = [];
+}
+
 let db = fs.existsSync(DB_FILE) ? JSON.parse(fs.readFileSync(DB_FILE,'utf8')) : freshDB();
-if(!db.cfg) db = freshDB();
-if(!db.cfg.breb) db.cfg.breb = { enabled:false, llave:'', beneficiary:'', business:'', qrImage:'', requireReceipt:false };
-if(db.cfg.slogan==null) db.cfg.slogan = 'La suerte tambien se gana';
-if(!Array.isArray(db.cfg.prizes)) db.cfg.prizes = [
-  { label:'Ultimas dos cifras', amount:1400000, enabled:true },
-  { label:'Primeras dos cifras', amount:100000, enabled:true },
-  { label:'Cifras del medio', amount:100000, enabled:true },
-  { label:'Cifras de union (primera y ultima)', amount:100000, enabled:true }
-];
-let saveTimer=null;
-function save(){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>fs.writeFileSync(DB_FILE, JSON.stringify(db,null,2)),120); }
-save();
+normalizeDB();
+let saveTimer=null, remoteTimer=null;
+function save(){
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>{ try{ fs.writeFileSync(DB_FILE, JSON.stringify(db,null,2)); }catch(e){} },120);
+  if(USE_REMOTE){ clearTimeout(remoteTimer); remoteTimer=setTimeout(remotePut,1500); }
+}
 
 /* ---------- Logica de dia / liberacion automatica ---------- */
 function hmToMin(hm){ if(!hm) return null; const [h,m]=hm.split(':').map(Number); return h*60+m; }
@@ -388,12 +434,21 @@ try { if (fs.existsSync(path.join(__dirname,'public'))) app.use(express.static(p
 app.get('/', (req,res)=> res.sendFile(resolvePage('index.html')));
 app.get('/admin', (req,res)=> res.sendFile(resolvePage('admin.html')));
 
-app.listen(PORT, '0.0.0.0', ()=>{
-  console.log('Rifa Diaria corriendo en puerto '+PORT);
-  console.log(' - Cliente: '+PUBLIC_URL+'/');
-  console.log(' - Admin:   '+PUBLIC_URL+'/admin');
-  console.log(' - Mercado Pago: '+(MP_TOKEN?'ACTIVO':'NO configurado (solo pago manual)'));
-  console.log(' - Bre-B/Nequi: '+((db.cfg.breb&&db.cfg.breb.enabled)?'ACTIVO':'desactivado (se activa en /admin)'));
-});
+(async ()=>{
+  if(USE_REMOTE){
+    const remote = await remoteLoad();
+    if(remote){ db = remote; normalizeDB(); console.log('[nube] datos cargados desde la nube (JSONBin)'); }
+    else { console.log('[nube] sin datos previos en la nube; se inicia con estado nuevo'); }
+  }
+  save(); // crea el archivo local y, si aplica, sube el estado inicial a la nube
+  app.listen(PORT, '0.0.0.0', ()=>{
+    console.log('Rifa Diaria corriendo en puerto '+PORT);
+    console.log(' - Cliente: '+PUBLIC_URL+'/');
+    console.log(' - Admin:   '+PUBLIC_URL+'/admin');
+    console.log(' - Mercado Pago: '+(MP_TOKEN?'ACTIVO':'NO configurado (solo pago manual)'));
+    console.log(' - Bre-B/Nequi: '+((db.cfg.breb&&db.cfg.breb.enabled)?'ACTIVO':'desactivado (se activa en /admin)'));
+    console.log(' - Guardado en la nube (JSONBin): '+(USE_REMOTE?'ACTIVO':'desactivado'));
+  });
+})();
 
 
