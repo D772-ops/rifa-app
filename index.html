@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DREAMS RIFA</title>
+<style>
+:root{--bg:#0A000A;--panel:#1a0820;--line:#4A004A;--txt:#f7eaff;--mut:#c89bd6;
+--pri:#FF00FF;--pri2:#FF33CC;--gold:#FFD700;--free:#2a0e33;--res:#FFD700;--paid:#22c186;--win:#FF00FF}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,Roboto,Arial,sans-serif;color:var(--txt);
+background:radial-gradient(900px 500px at 70% -10%,#4A004A,transparent),radial-gradient(700px 400px at 10% 110%,#2a0030,transparent),var(--bg);padding:16px;min-height:100vh}
+#app{max-width:720px;margin:0 auto}
+header{text-align:center;margin-bottom:14px}
+.logo{font-size:40px;font-weight:900;letter-spacing:2px;line-height:1.05;
+background:linear-gradient(180deg,#FF66DD 0%,#FF00FF 45%,#FFD700 100%);
+-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
+filter:drop-shadow(0 0 10px rgba(255,0,255,.55))}
+header h1{font-size:24px}
+.slogan{color:var(--gold);font-size:15px;font-style:italic;margin-top:6px;text-shadow:0 0 8px rgba(255,215,0,.5)}
+header .sub{color:var(--mut);font-size:13px;margin-top:4px}
+.prizes{display:flex;flex-direction:column;gap:8px;margin:14px 0}
+.prize{display:flex;justify-content:space-between;align-items:center;gap:10px;
+background:linear-gradient(135deg,rgba(255,0,255,.12),rgba(74,0,74,.3));
+border:1px solid var(--pri);border-radius:12px;padding:11px 14px;
+box-shadow:0 0 14px rgba(255,0,255,.18)}
+.prize .pl{font-size:14px;color:var(--txt);font-weight:600}
+.prize .pa{font-size:17px;font-weight:800;color:var(--gold);text-shadow:0 0 8px rgba(255,215,0,.45);white-space:nowrap}
+.prize.main{background:linear-gradient(135deg,rgba(255,215,0,.18),rgba(255,0,255,.18));border-color:var(--gold);box-shadow:0 0 20px rgba(255,215,0,.3)}
+.prize.main .pa{font-size:21px}
+.sharebar{margin:14px 0}
+.btn-share{width:100%;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:800;cursor:pointer;
+color:#0A000A;background:linear-gradient(135deg,var(--gold),#ffe766);box-shadow:0 0 16px rgba(255,215,0,.4)}
+.banner{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+padding:12px 14px;margin:12px 0;text-align:center;font-size:14px}
+.banner b{color:var(--pri2)}
+.board{display:grid;grid-template-columns:repeat(10,1fr);gap:7px;margin-top:12px}
+.cell{aspect-ratio:1/1;border-radius:11px;border:1px solid var(--line);background:var(--free);
+display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;
+cursor:pointer;transition:.12s;position:relative;font-variant-numeric:tabular-nums}
+.cell:hover{transform:translateY(-2px)}
+.cell{box-shadow:0 0 0 0 rgba(255,0,255,0)}
+.cell.available{color:#e9c9f3}
+.cell.reserved{background:#3a2e05;border-color:var(--res);color:var(--res);cursor:not-allowed}
+.cell.paid{background:#0f3528;border-color:var(--paid);color:var(--paid);cursor:not-allowed}
+.cell.winner{background:#4a1526;border-color:var(--win);box-shadow:0 0 0 2px var(--win)}
+.cell.sel{outline:3px solid var(--pri2);outline-offset:1px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;color:var(--mut);font-size:13px;margin:14px 0}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.i-free{background:var(--free);border:1px solid var(--line)}.i-res{background:var(--res)}
+.i-paid{background:var(--paid)}.i-win{background:var(--win)}
+.foot{text-align:center;color:var(--mut);font-size:12px;margin-top:18px}
+.foot a{color:var(--mut)}
+.modal-bg{position:fixed;inset:0;background:rgba(5,7,16,.7);display:none;z-index:40}
+.modal-bg.show{display:block}
+.modal{position:fixed;z-index:50;left:50%;top:50%;transform:translate(-50%,-50%);
+width:min(440px,94vw);background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;display:none}
+.modal.show{display:block}
+.modal h2{font-size:19px;margin-bottom:6px}
+.modal .pick{color:var(--pri2);font-weight:700}
+.field{margin:12px 0}
+.field label{display:block;font-size:13px;color:var(--mut);margin-bottom:5px}
+.field input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;
+color:var(--txt);padding:11px 12px;font-size:15px}
+.pay-opts{display:flex;gap:10px;margin:14px 0}
+.pay-opt{flex:1;border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center;cursor:pointer;font-size:13px}
+.pay-opt.on{border-color:var(--pri2);background:#232a4a}
+.pay-opt .big{font-size:22px;display:block;margin-bottom:4px}
+.btn{width:100%;border:none;border-radius:11px;padding:13px;font-size:15px;font-weight:600;cursor:pointer;color:#fff}
+.btn.primary{background:linear-gradient(135deg,var(--pri),var(--pri2));box-shadow:0 0 16px rgba(255,0,255,.4)}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--txt);font-weight:500;margin-top:8px}
+.note{font-size:12px;color:var(--mut);margin-top:12px;line-height:1.5}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);
+background:#111633;border:1px solid var(--pri);color:#fff;padding:12px 20px;border-radius:12px;
+font-size:14px;opacity:0;transition:.3s;z-index:60}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.qr-box{text-align:center}
+.qr-img{width:230px;max-width:80%;background:#fff;border-radius:14px;padding:10px;margin:6px auto 2px;display:block}
+.amount{font-size:28px;font-weight:800;color:var(--paid);margin:6px 0}
+.llave{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--bg);
+border:1px dashed var(--pri2);border-radius:10px;padding:10px;margin:10px 0;font-size:17px;font-weight:700;letter-spacing:1px}
+.benef{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;font-size:13px;color:var(--mut);margin:8px 0}
+.benef b{color:var(--txt)}
+.steps{text-align:left;font-size:13px;line-height:1.7;color:var(--txt);padding-left:18px;margin:8px 0}
+.copybtn{background:var(--panel);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer;width:auto}
+.badge-breb{display:inline-block;background:#2a1a4a;color:#c3b6ff;border:1px solid var(--pri);border-radius:8px;padding:2px 8px;font-size:11px;font-weight:700}
+@media(max-width:560px){.board{grid-template-columns:repeat(5,1fr)}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo" id="logo">DREAMS RIFA</div>
+    <div class="slogan" id="slogan">La suerte tambien se gana</div>
+    <div class="sub" id="sub"></div>
+  </header>
+  <div class="prizes" id="prizes"></div>
+  <div class="banner" id="banner"></div>
+  <div class="sharebar">
+    <button class="btn-share" id="shareBtn">📲 Descargar imagen para WhatsApp</button>
+  </div>
+  <div class="board" id="board"></div>
+  <div class="legend">
+    <span><i class="i-free"></i>Libre</span>
+    <span><i class="i-res"></i>Reservado</span>
+    <span><i class="i-paid"></i>Pagado</span>
+    <span><i class="i-win"></i>Ganador</span>
+  </div>
+  <div class="foot">Elige un número libre para participar.</div>
+</div>
+
+<div class="modal-bg" id="mbg"></div>
+<div class="modal" id="modal"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+let S=null, sel=null, payMode='online';
+const $=id=>document.getElementById(id);
+function pad(n){return String(n).padStart(2,'0');}
+function money(n){return (S?S.cfg.currency:'')+' '+Number(n||0).toLocaleString('es-CO');}
+function esc(s){return (s==null?'':String(s)).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]));}
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3000);}
+function closeModal(){$('modal').classList.remove('show');$('mbg').classList.remove('show');}
+$('mbg').onclick=closeModal;
+
+async function load(){
+  try{ S = await (await fetch('/api/state')).json(); }catch(e){ toast('Sin conexión'); return; }
+  $('logo').textContent=S.cfg.raffleName||'DREAMS RIFA';
+  const sl=$('slogan'); if(S.cfg.slogan){ sl.textContent=S.cfg.slogan; sl.style.display=''; } else { sl.style.display='none'; }
+  document.title=S.cfg.raffleName||'DREAMS RIFA';
+  $('sub').textContent=new Date(S.date+'T00:00:00').toLocaleDateString('es',{weekday:'long',day:'numeric',month:'long'});
+  renderPrizes();
+  const relHM = S.cfg.releaseAt==null?'--:--':pad(Math.floor(S.cfg.releaseAt/60))+':'+pad(S.cfg.releaseAt%60);
+  $('banner').innerHTML='Valor por número <b>'+money(S.cfg.price)+'</b> &nbsp;•&nbsp; Sorteo <b>'+S.cfg.drawTime+
+    '</b> &nbsp;•&nbsp; Las reservas sin pago se liberan a las <b>'+relHM+'</b>';
+  renderBoard();
+}
+function renderPrizes(){
+  const box=$('prizes'); box.innerHTML='';
+  const ps=(S.cfg.prizes||[]);
+  ps.forEach((p,i)=>{
+    const d=document.createElement('div');
+    d.className='prize'+(i===0?' main':'');
+    d.innerHTML='<span class="pl">'+(i===0?'\u{1F3C6} ':'\u2728 ')+esc(p.label)+'</span><span class="pa">'+money(p.amount)+'</span>';
+    box.appendChild(d);
+  });
+}
+function renderBoard(){
+  const b=$('board'); b.innerHTML='';
+  for(let i=0;i<100;i++){
+    const k=pad(i), n=S.numbers[k];
+    const c=document.createElement('div');
+    c.className='cell '+n.status+(S.winner===k?' winner':'');
+    c.textContent=k;
+    if(n.status==='available') c.onclick=()=>choose(k);
+    b.appendChild(c);
+  }
+}
+function methodsAvailable(){
+  const m=[];
+  if(S.cfg.breb && S.cfg.breb.enabled) m.push('breb');
+  if(S.mp) m.push('online');
+  m.push('manual');
+  return m;
+}
+function choose(k){
+  sel=k;
+  const m=methodsAvailable();
+  payMode = m[0];
+  openForm();
+}
+function openForm(){
+  const m=methodsAvailable();
+  const labels={
+    breb:['⚡','Bre-B / Nequi<br>(QR)'],
+    online:['💳','Tarjeta / PSE<br>(automático)'],
+    manual:['🤝','Pago directo<br>(coordinar)']
+  };
+  let opts='';
+  if(m.length>1){
+    opts='<label style="font-size:13px;color:var(--mut)">¿Cómo quieres pagar?</label><div class="pay-opts">';
+    m.forEach(x=>{ opts+='<div class="pay-opt'+(x===payMode?' on':'')+'" id="opt_'+x+'" onclick="setPay(\''+x+'\')"><span class="big">'+labels[x][0]+'</span>'+labels[x][1]+'</div>'; });
+    opts+='</div>';
+  }
+  $('modal').innerHTML =
+    '<h2>Participar con el número <span class="pick">'+sel+'</span></h2>'+
+    '<div class="field"><label>Tu nombre (como aparece en Nequi o tu banco)</label><input id="i_name" placeholder="Nombre y apellido"></div>'+
+    '<div class="field"><label>WhatsApp</label><input id="i_phone" placeholder="Ej: 300 123 4567"></div>'+
+    opts+
+    '<button class="btn primary" id="go" onclick="submitReserve()">'+goLabel()+'</button>'+
+    '<button class="btn ghost" onclick="closeModal()">Cancelar</button>'+
+    '<div class="note">El número queda <b>reservado</b> a tu nombre. Coordina tu pago con el organizador para confirmarlo.</div>';
+  $('mbg').classList.add('show'); $('modal').classList.add('show');
+}
+function goLabel(){
+  if(payMode==='online') return 'Reservar y pagar';
+  if(payMode==='breb') return 'Reservar y generar QR';
+  return 'Reservar número';
+}
+function setPay(m){
+  payMode=m;
+  document.querySelectorAll('.pay-opt').forEach(e=>e.classList.remove('on'));
+  const el=document.getElementById('opt_'+m); if(el) el.classList.add('on');
+  $('go').textContent=goLabel();
+}
+async function submitReserve(){
+  const buyer=$('i_name').value.trim();
+  const phone=$('i_phone').value.trim();
+  if(!buyer){ toast('Escribe tu nombre'); return; }
+  $('go').disabled=true; $('go').textContent='Procesando...';
+  let r;
+  try{
+    r = await (await fetch('/api/reserve',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({number:sel,buyer,phone,method:payMode})})).json();
+  }catch(e){ toast('Error de conexión'); $('go').disabled=false; return; }
+  if(r.error){ toast(r.error); $('go').disabled=false; load(); return; }
+  if(r.payUrl){ window.location.href = r.payUrl; return; }      // Mercado Pago
+  if(r.method==='breb' && r.breb){ brebScreen(r.number, r.breb); load(); return; }
+  closeModal(); load();
+  if(r.warn) toast(r.warn);
+  else toast('Número '+r.number+' reservado. Coordina tu pago para confirmarlo.');
+}
+
+/* ===== Flujo de pago Bre-B / Nequi (QR + llave) ===== */
+let claimReceipt='';
+function brebScreen(num, b){
+  claimReceipt='';
+  const qr = b.qrImage
+    ? '<img class="qr-img" src="'+b.qrImage+'" alt="QR Bre-B">'
+    : '<div class="benef">El organizador aún no cargó el QR. Usa la <b>llave Bre-B</b> de abajo para transferir.</div>';
+  const llave = b.llave
+    ? '<div class="llave"><span>'+esc(b.llave)+'</span><button class="copybtn" onclick="copyLlave(\''+esc(b.llave)+'\')">Copiar</button></div>'
+    : '';
+  $('modal').innerHTML=
+    '<div class="qr-box">'+
+    '<span class="badge-breb">⚡ Bre-B</span>'+
+    '<h2 style="margin-top:8px">Paga el número <span class="pick">'+num+'</span></h2>'+
+    qr+
+    '<div class="amount">'+(b.currency||'')+' '+Number(b.amount||0).toLocaleString('es-CO')+'</div>'+
+    (b.llave?'<div style="font-size:12px;color:var(--mut)">Llave Bre-B</div>':'')+llave+
+    '<div class="benef">'+(b.business?'<div><b>'+esc(b.business)+'</b></div>':'')+
+      (b.beneficiary?'<div>Titular: <b>'+esc(b.beneficiary)+'</b></div>':'')+'</div>'+
+    '<ol class="steps">'+
+      '<li>Abre tu app bancaria o <b>Nequi</b> y escanea el QR (o usa la opción Bre-B / Llaves).</li>'+
+      '<li>Si no puedes escanear, copia la <b>llave Bre-B</b> y pégala en tu app.</li>'+
+      '<li>Transfiere el <b>valor exacto</b>: '+(b.currency||'')+' '+Number(b.amount||0).toLocaleString('es-CO')+'.</li>'+
+      '<li>Vuelve aquí y pulsa <b>“Ya transferí”</b> para avisar al organizador.</li>'+
+    '</ol>'+
+    (b.requireReceipt
+      ? '<div class="field"><label>Adjunta el comprobante (obligatorio)</label><input type="file" accept="image/*" id="rc" onchange="readReceipt(this)"></div>'
+      : '<div class="field"><label>Comprobante (opcional, ayuda a confirmar más rápido)</label><input type="file" accept="image/*" id="rc" onchange="readReceipt(this)"></div>')+
+    '<button class="btn primary" id="claimBtn" onclick="doClaim(\''+num+'\','+(b.requireReceipt?'true':'false')+')">Ya transferí</button>'+
+    '<button class="btn ghost" onclick="closeModal();load()">Lo haré luego</button>'+
+    '<div class="note">Tu número <b>'+num+'</b> queda reservado. El organizador confirmará tu pago; mientras tanto no se liberará.</div>'+
+    '</div>';
+}
+function copyLlave(v){ navigator.clipboard.writeText(v).then(()=>toast('Llave copiada')).catch(()=>toast('Copia manual: '+v)); }
+function readReceipt(inp){
+  const f=inp.files[0]; if(!f) return;
+  if(f.size>5*1024*1024){ toast('Imagen muy grande (máx 5MB)'); inp.value=''; return; }
+  const fr=new FileReader(); fr.onload=()=>{ claimReceipt=fr.result; toast('Comprobante listo'); }; fr.readAsDataURL(f);
+}
+async function doClaim(num, requireReceipt){
+  if(requireReceipt && !claimReceipt){ toast('Adjunta el comprobante para continuar'); return; }
+  const btn=$('claimBtn'); btn.disabled=true; btn.textContent='Enviando...';
+  try{
+    await fetch('/api/claim',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({number:num, receipt:claimReceipt||undefined})});
+  }catch(e){}
+  closeModal(); load();
+  toast('¡Gracias! Avisamos al organizador. Tu número '+num+' quedará confirmado pronto.');
+}
+
+// Si vuelve de Mercado Pago
+const qs=new URLSearchParams(location.search);
+if(qs.get('pago')==='ok') setTimeout(()=>toast('¡Pago recibido! Tu número quedará marcado como pagado.'),400);
+else if(qs.get('pago')==='pendiente') setTimeout(()=>toast('Pago pendiente de confirmación.'),400);
+if(qs.get('pago')) history.replaceState({},'',location.pathname);
+
+// --- Descargar imagen del tablero para compartir en WhatsApp ---
+function countStatus(){
+  let libre=0,res=0,pag=0;
+  for(let i=0;i<100;i++){const s=S.numbers[pad(i)].status; if(s==='paid')pag++; else if(s==='reserved')res++; else libre++;}
+  return {libre,res,pag};
+}
+function shareImage(){
+  if(!S){ toast('Espera, cargando...'); return; }
+  const W=1080, pad0=48, cols=10, gap=12;
+  const gridW=W-pad0*2, cell=(gridW-gap*(cols-1))/cols;
+  const topH=360, legendH=150, gridH=cell*10+gap*9;
+  const H=topH+gridH+legendH;
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+  const x=cv.getContext('2d');
+  // fondo
+  const bg=x.createLinearGradient(0,0,W,H); bg.addColorStop(0,'#1a0020'); bg.addColorStop(.5,'#0A000A'); bg.addColorStop(1,'#20002a');
+  x.fillStyle=bg; x.fillRect(0,0,W,H);
+  x.textAlign='center';
+  // logo
+  x.font='900 72px Segoe UI,Arial,sans-serif';
+  const lg=x.createLinearGradient(0,60,0,140); lg.addColorStop(0,'#FF66DD'); lg.addColorStop(.5,'#FF00FF'); lg.addColorStop(1,'#FFD700');
+  x.fillStyle=lg; x.shadowColor='rgba(255,0,255,.6)'; x.shadowBlur=24;
+  x.fillText((S.cfg.raffleName||'DREAMS RIFA').toUpperCase(),W/2,120);
+  x.shadowBlur=0;
+  if(S.cfg.slogan){ x.font='italic 34px Segoe UI,Arial,sans-serif'; x.fillStyle='#FFD700'; x.fillText(S.cfg.slogan,W/2,170); }
+  // premio principal
+  const ps=(S.cfg.prizes||[]);
+  if(ps[0]){ x.font='800 44px Segoe UI,Arial,sans-serif'; x.fillStyle='#FFE766'; x.shadowColor='rgba(255,215,0,.5)'; x.shadowBlur=16;
+    x.fillText('\u{1F3C6} '+money(ps[0].amount),W/2,236); x.shadowBlur=0;
+    x.font='28px Segoe UI,Arial,sans-serif'; x.fillStyle='#c89bd6'; x.fillText(ps[0].label,W/2,276); }
+  // fecha + valor numero
+  x.font='26px Segoe UI,Arial,sans-serif'; x.fillStyle='#f7eaff';
+  const fecha=new Date(S.date+'T00:00:00').toLocaleDateString('es',{weekday:'long',day:'numeric',month:'long'});
+  x.fillText('Valor por numero: '+money(S.cfg.price)+'  \u2022  Sorteo '+S.cfg.drawTime,W/2,318);
+  x.fillText(fecha,W/2,350);
+  // tablero
+  const gy=topH;
+  for(let i=0;i<100;i++){
+    const k=pad(i), s=S.numbers[k].status, win=(S.winner===k);
+    const cx=pad0+(i%10)*(cell+gap), cy=gy+Math.floor(i/10)*(cell+gap);
+    let fill='#2a0e33',bd='#4A004A',tc='#e9c9f3';
+    if(s==='reserved'){fill='#3a2e05';bd='#FFD700';tc='#FFD700';}
+    else if(s==='paid'){fill='#0f3528';bd='#22c186';tc='#5ef0b8';}
+    if(win){bd='#FF00FF';}
+    x.fillStyle=fill; x.strokeStyle=bd; x.lineWidth=win?6:3;
+    rr(x,cx,cy,cell,cell,16); x.fill(); x.stroke();
+    x.fillStyle=tc; x.font='700 '+Math.floor(cell*0.42)+'px Segoe UI,Arial,sans-serif';
+    x.textBaseline='middle'; x.fillText(k,cx+cell/2,cy+cell/2);
+    x.textBaseline='alphabetic';
+  }
+  // leyenda + conteo
+  const c=countStatus(), ly=gy+gridH+56;
+  x.font='30px Segoe UI,Arial,sans-serif'; x.textAlign='center';
+  x.fillStyle='#e9c9f3'; x.fillText('\u2B1C Libres: '+c.libre+'    \u{1F7E8} Reservados: '+c.res+'    \u{1F7E9} Pagados: '+c.pag,W/2,ly);
+  x.font='24px Segoe UI,Arial,sans-serif'; x.fillStyle='#c89bd6';
+  x.fillText('Escribe al organizador para apartar tu numero \u2022 '+money(S.cfg.price)+' c/u',W/2,ly+44);
+  // descargar
+  cv.toBlob(function(blob){
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url; a.download=(S.cfg.raffleName||'rifa').replace(/\s+/g,'_')+'_'+S.date+'.png';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),4000);
+    toast('Imagen lista. Compartela en WhatsApp \u{1F4F2}');
+  },'image/png');
+}
+function rr(x,X,Y,w,h,r){x.beginPath();x.moveTo(X+r,Y);x.arcTo(X+w,Y,X+w,Y+h,r);x.arcTo(X+w,Y+h,X,Y+h,r);x.arcTo(X,Y+h,X,Y,r);x.arcTo(X,Y,X+w,Y,r);x.closePath();}
+$('shareBtn').onclick=shareImage;
+
+load();
+setInterval(load, 20000);
+</script>
+</body>
+</html>
