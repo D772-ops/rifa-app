@@ -1,5 +1,12 @@
 # Rifa Diaria 00–99 — con cobro en línea y vista de cliente
 
+> 🚀 **¿Solo quieres ponerla en Internet ya?** Mira **DESPLIEGUE_1CLICK.md**
+> (despliegue en 1 clic con Render). La forma larga paso a paso está en **DESPLIEGUE.md**.
+>
+> Botón de despliegue (cambia `TU_USUARIO` por tu usuario de GitHub):
+>
+> `https://render.com/deploy?repo=https://github.com/TU_USUARIO/rifa-app`
+
 App web para gestionar una rifa diaria de dos cifras (del 00 al 99). Tiene **dos vistas separadas**:
 
 - **Cliente** → `https://TU-DOMINIO/`  
@@ -70,10 +77,10 @@ Revisa la normativa local antes de operar.
 ```
 rifa-app/
   server.js            # servidor + API + webhook de pagos
+  index.html           # vista CLIENTE (sin configuración)
+  admin.html           # vista ADMIN (con clave)
   package.json
+  render.yaml          # para el despliegue en 1 clic en Render
   .env.example         # copia a .env y completa
-  public/
-    index.html         # vista CLIENTE (sin configuración)
-    admin.html         # vista ADMIN (con clave)
   db.json              # se crea al ejecutar (base de datos)
 ```

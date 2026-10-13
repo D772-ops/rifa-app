@@ -1,3 +1,6 @@
+# Blueprint de Render: deja la app lista casi sin configurar.
+# Al usar el botón "Deploy to Render", Render lee este archivo y crea el
+# servicio solo. Tú solo escribes tu clave de administrador.
 services:
   - type: web
     name: rifa-diaria
@@ -6,9 +9,15 @@ services:
     buildCommand: npm install
     startCommand: node server.js
     envVars:
+      # Node 18+ es necesario para el cobro con Mercado Pago.
       - key: NODE_VERSION
         value: "18"
+      # Render te pedirá escribir esta clave durante el despliegue.
+      # Es la contraseña para entrar a /admin. ¡Elige una buena!
       - key: ADMIN_PASSWORD
         sync: false
+      # (Opcional) Token de Mercado Pago para cobro automático con tarjeta/PSE.
+      # Déjalo vacío si por ahora solo usarás Bre-B/Nequi.
       - key: MP_ACCESS_TOKEN
         sync: false
+      # PUBLIC_URL NO hace falta: la app detecta sola la URL de Render.
