@@ -69,6 +69,9 @@ function newRaffle(name){
     mode: 'numbers',             // 'numbers' = rifa con tablero | 'showcase' = vitrina de solo premios
     lotteryImage: '',            // imagen de la loteria (solo para vitrina), guardada en su propia caja
     lotteryBin: '',              // id de la caja JSONBin donde vive la imagen de la loteria
+    showResult: false,           // vitrina: mostrar el numero ganador de la loteria
+    resultNumber: '',            // vitrina: numero ganador (ej '0422')
+    resultShape: 'circle',       // vitrina: 'circle' = bolitas | 'square' = cuadritos
     prizes: defaultPrizes(),
     breb: defaultBreb(),
     numbers: blankNumbers(),
@@ -239,6 +242,9 @@ function normalizeRaffle(r){
   if(r.mode!=='showcase') r.mode = 'numbers';
   if(r.lotteryImage==null) r.lotteryImage = '';
   if(r.lotteryBin==null) r.lotteryBin = '';
+  if(r.showResult==null) r.showResult = false;
+  if(r.resultNumber==null) r.resultNumber = '';
+  if(r.resultShape!=='square') r.resultShape = 'circle';
   if(!Array.isArray(r.prizes)) r.prizes = defaultPrizes();
   if(!r.breb) r.breb = defaultBreb();
   if(r.breb.qrBin==null) r.breb.qrBin = '';
@@ -396,6 +402,7 @@ function publicRaffle(r){
     id:r.id, name:r.name, slogan:r.slogan, color:r.color, status:r.status, currency:r.currency, price:r.price,
     drawDate:r.drawDate, drawTime:r.drawTime, drawNote:r.drawNote, whatsapp:r.whatsapp,
     mode:(r.mode==='showcase'?'showcase':'numbers'), lotteryImage:r.lotteryImage||'',
+    showResult:!!r.showResult, resultNumber:r.resultNumber||'', resultShape:(r.resultShape==='square'?'square':'circle'),
     autoReleaseMin:Number(r.autoReleaseMin)||0, release:releaseInfo(r),
     prizes:(Array.isArray(r.prizes)?r.prizes:[]).filter(p=>p&&p.enabled).map(p=>({label:p.label,amount:p.amount})),
     breb: (b.enabled ? { enabled:true, llave:b.llave, beneficiary:b.beneficiary, business:b.business,
@@ -583,6 +590,9 @@ app.post('/api/admin/raffle/update', auth, async (req,res)=>{
   if(b.whatsapp!=null) r.whatsapp = String(b.whatsapp).slice(0,300);
   if(b.autoReleaseMin!=null){ let m=Number(b.autoReleaseMin); if(isNaN(m)||m<0) m=0; if(m>1440) m=1440; r.autoReleaseMin=Math.round(m); }
   if(b.mode==='numbers' || b.mode==='showcase') r.mode = b.mode;
+  if(b.showResult!=null) r.showResult = !!b.showResult;
+  if(b.resultNumber!=null) r.resultNumber = String(b.resultNumber).slice(0,20);
+  if(b.resultShape!=null) r.resultShape = (b.resultShape==='square'?'square':'circle');
   if(typeof b.lotteryImage === 'string'){
     if(b.lotteryImage===''){ r.lotteryImage=''; r.lotteryBin=''; }
     else if(/^https?:\/\//.test(b.lotteryImage)){ r.lotteryImage=b.lotteryImage; r.lotteryBin=''; }   // ya es un enlace
