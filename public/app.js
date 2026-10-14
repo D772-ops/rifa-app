@@ -78,8 +78,14 @@ async function loadBoard(){
   const wa=$('waBtn');
   if(S.whatsapp){ wa.href=S.whatsapp; wa.classList.remove('hidden'); $('waBtnLabel').textContent='Unirme al grupo de «'+(S.name||'la rifa')+'»'; }
   else wa.classList.add('hidden');
-  $('banner').innerHTML='<b>'+esc(S.name)+'</b> &nbsp;•&nbsp; Valor por número <b>'+money(S.currency,S.price)+'</b> &nbsp;•&nbsp; Sorteo <b>'+esc(S.drawTime||'')+'</b> del <b>'+fechaLarga(S.drawDate)+'</b>'+(S.drawNote?' &nbsp;•&nbsp; '+esc(S.drawNote):'');
+  $('banner').innerHTML='<b>'+esc(S.name)+'</b> &nbsp;•&nbsp; Valor por número <b>'+money(S.currency,S.price)+'</b> &nbsp;•&nbsp; Sorteo <b>'+esc(S.drawTime||'')+'</b> del <b>'+fechaLarga(S.drawDate)+'</b>'+(S.drawNote?' &nbsp;•&nbsp; '+esc(S.drawNote):'')+releaseBannerHtml();
   renderBoard();
+}
+function releaseBannerHtml(){
+  if(!S || !S.release) return '';
+  const r=S.release;
+  const dstr = r.sameDay ? '' : (' del '+fechaLarga(r.date));
+  return '<div style="margin-top:8px;padding:8px 12px;border-radius:10px;background:rgba(255,215,0,.10);border:1px solid rgba(255,215,0,.45);color:#FFD700;font-size:14px">⏰ Los números reservados <b>sin pago</b> se liberan <b>desde las '+esc(r.time)+dstr+'</b> si no se confirma el pago.</div>';
 }
 function renderPrizes(){
   const box=$('prizes'); box.innerHTML='';
@@ -188,7 +194,7 @@ function shareImage(){
   const gridW=W-pad0*2, cell=(gridW-gap*(cols-1))/cols;
   const ps=(S.prizes||[]);
   const nSec=Math.max(0,ps.length-1), SEC=48;
-  const topH=360+nSec*SEC, legendH=150, gridH=cell*10+gap*9;
+  const topH=360+nSec*SEC, legendH=150+(S.release?46:0), gridH=cell*10+gap*9;
   const H=topH+gridH+legendH;
   const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
   const x=cv.getContext('2d');
@@ -229,6 +235,13 @@ function shareImage(){
   x.fillText('\u2B1C Libres: '+c.libre+'    \u{1F7E8} Reservados: '+c.res+'    \u{1F7E9} Pagados: '+c.pag,W/2,ly);
   x.font='24px Segoe UI,Arial,sans-serif'; x.fillStyle='#c89bd6';
   x.fillText('Escribe al organizador para apartar tu numero \u2022 '+money(S.currency,S.price)+' c/u',W/2,ly+44);
+  if(S.release){
+    const r=S.release, ds=r.sameDay?'':(' del '+fechaLarga(r.date));
+    x.font='700 26px Segoe UI,Arial,sans-serif'; x.fillStyle='#FFD700';
+    x.shadowColor='rgba(255,215,0,.35)'; x.shadowBlur=10;
+    x.fillText('\u23F0 Numeros sin pago se liberan desde las '+r.time+ds,W/2,ly+90);
+    x.shadowBlur=0;
+  }
   cv.toBlob(function(blob){
     const url=URL.createObjectURL(blob); const a=document.createElement('a');
     a.href=url; a.download=(S.name||'rifa').replace(/\s+/g,'_')+'_'+(S.drawDate||'')+'.png';

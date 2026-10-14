@@ -202,15 +202,16 @@ function openConfig(){
       '<option value="hidden"'+(r.status==='hidden'?' selected':'')+'>Oculta (no aparece en la página)</option></select></div>'+
     '<div class="row"><div class="field"><label>Precio por número</label><input id="cPrice" type="number" value="'+(r.price||0)+'"></div>'+
       '<div class="field"><label>Moneda</label><input id="cCurrency" value="'+esc(r.currency||'COP')+'"></div></div>'+
-    '<div class="row"><div class="field"><label>Fecha del sorteo</label><input id="cDate" type="date" value="'+esc(r.drawDate||'')+'"></div>'+
-      '<div class="field"><label>Hora del sorteo</label><input id="cTime" type="time" value="'+esc(r.drawTime||'')+'"></div></div>'+
+    '<div class="row"><div class="field"><label>Fecha del sorteo</label><input id="cDate" type="date" value="'+esc(r.drawDate||'')+'" oninput="autoRelHint()"></div>'+
+      '<div class="field"><label>Hora del sorteo</label><input id="cTime" type="time" value="'+esc(r.drawTime||'')+'" oninput="autoRelHint()"></div></div>'+
     '<div class="field"><label>Nota del sorteo (libre)</label><input id="cNote" value="'+esc(r.drawNote||'')+'" placeholder="Ej: Sorteo cada domingo con la lotería"></div>'+
     '<div class="field"><label>Liberar automáticamente los números reservados SIN pago antes del sorteo</label>'+
-      '<select id="cAutoRel">'+
-        [[0,'Desactivado (los libero yo a mano)'],[5,'5 minutos antes'],[10,'10 minutos antes'],[15,'15 minutos antes'],[30,'30 minutos antes'],[60,'1 hora antes'],[120,'2 horas antes']]
-          .map(o=>'<option value="'+o[0]+'"'+((Number(r.autoReleaseMin)||0)===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+
-      '</select>'+
-      '<div class="hint">Solo libera los números <b>reservados sin comprobante</b>. NO toca los pagados ni los que esperan aprobación de pago.</div></div>'+
+      '<div class="row" style="align-items:center">'+
+        '<input id="cAutoRel" type="number" min="0" max="1440" step="1" style="flex:0 0 120px" value="'+(Number(r.autoReleaseMin)||0)+'" oninput="autoRelHint()">'+
+        '<span style="color:var(--mut)">minutos antes del sorteo</span>'+
+      '</div>'+
+      '<div class="hint" id="autoRelHint"></div>'+
+      '<div class="hint">Escribe los minutos que quieras (ej: 5, 20, 90). Pon <b>0</b> para desactivar y liberar los números tú misma. Solo libera los números <b>reservados sin comprobante</b>: NO toca los pagados ni los que esperan aprobación de pago.</div></div>'+
     '<div class="field"><label>Enlace del grupo de WhatsApp de esta rifa</label><input id="cWhats" value="'+esc(r.whatsapp||'')+'" placeholder="https://chat.whatsapp.com/..."></div>'+
     '<div class="field"><label>Premios (hasta 10)</label><div id="prizeBox"></div>'+
       '<button type="button" class="btn sm" style="margin-top:8px" onclick="prizeAdd()">+ Agregar premio</button>'+
@@ -225,7 +226,22 @@ function openConfig(){
       '<div id="qrBox">'+(_qr?'<img class="qr-prev" src="'+_qr+'"><br><button class="btn sm danger" onclick="qrDel()">Quitar QR</button>':'<button class="btn sm" onclick="$(\'qrFile\').click()">Subir imagen QR</button>')+'</div>'+
       '<input id="qrFile" type="file" accept="image/*" style="display:none" onchange="qrPick(event)"></div>'+
     '<div class="btns"><button class="btn primary" onclick="saveConfig()">Guardar cambios</button></div>';
-  openModal(h); renderColorBox(); renderPrizeBox();
+  openModal(h); renderColorBox(); renderPrizeBox(); autoRelHint();
+}
+function autoRelHint(){
+  const box=$('autoRelHint'); if(!box) return;
+  const mins=Number(($('cAutoRel')||{}).value)||0;
+  const date=($('cDate')||{}).value||'', time=($('cTime')||{}).value||'20:00';
+  if(mins<=0){ box.innerHTML='⛔ Liberación automática <b>desactivada</b>.'; return; }
+  if(!date){ box.innerHTML='Primero pon la fecha y hora del sorteo para calcular la hora.'; return; }
+  const base=new Date(date+'T'+(/^\d{2}:\d{2}$/.test(time)?time:'20:00')+':00');
+  if(isNaN(base.getTime())){ box.innerHTML=''; return; }
+  const rel=new Date(base.getTime()-mins*60000);
+  const p=n=>String(n).padStart(2,'0');
+  const hhmm=p(rel.getHours())+':'+p(rel.getMinutes());
+  const sameDay=rel.toDateString()===base.toDateString();
+  const dstr=sameDay?'':(' del '+rel.toLocaleDateString('es',{day:'numeric',month:'long'}));
+  box.innerHTML='✅ Los números sin pago se liberarán <b>desde las '+hhmm+dstr+'</b> (es decir, '+mins+' min antes del sorteo).';
 }
 function renderPrizeBox(){
   const box=$('prizeBox'); if(!box) return;
