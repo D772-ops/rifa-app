@@ -104,7 +104,17 @@ async function uploadImage(dataUri){
   try{
     const b64 = dataUri.includes(',') ? dataUri.split(',')[1] : dataUri;
     const body = new URLSearchParams(); body.set('image', b64);
-    const r = await fetch('https://api.imgbb.com/1/upload?key='+encodeURIComponent(IMGBB_KEY), { method:'POST', body });
+    const r = await fetch('https://api.imgbb.com/1/upload?key='+encodeURIComponent(IMGBB_KEY), {
+      method:'POST',
+      // imgbb (Cloudflare) bloquea peticiones que no parecen de un navegador:
+      // mandamos User-Agent y Accept de navegador para evitar el "forbidden".
+      headers:{
+        'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept':'application/json, text/plain, */*',
+        'Accept-Language':'es-ES,es;q=0.9,en;q=0.8'
+      },
+      body
+    });
     const j = await r.json().catch(()=>null);
     if(r.ok && j && j.success && j.data && j.data.url){ console.log('[img] imagen subida a imgbb OK'); return j.data.url; }
     console.error('[img] NO se pudo subir la imagen (HTTP '+r.status+'): '+((j&&j.error&&j.error.message)||''));
@@ -272,6 +282,23 @@ function autoReleaseTick(){
   }
   if(changed){ console.log('[auto] se liberaron '+total+' numero(s) reservado(s) sin pago antes del sorteo'); save(); }
 }
+// Devuelve desde que hora/fecha se liberan los numeros sin pago (o null si esta
+// desactivado). Es aritmetica de reloj sobre la hora local de la rifa (Colombia).
+function releaseInfo(r){
+  const mins = Number(r && r.autoReleaseMin)||0;
+  if(mins<=0 || !r.drawDate) return null;
+  const hhmm = (typeof r.drawTime==='string' && /^\d{2}:\d{2}$/.test(r.drawTime)) ? r.drawTime : '20:00';
+  const base = new Date(r.drawDate+'T'+hhmm+':00');          // hora de la rifa
+  if(isNaN(base.getTime())) return null;
+  const rel = new Date(base.getTime() - mins*60000);
+  const p = n=>String(n).padStart(2,'0');
+  return {
+    minutes: mins,
+    time: p(rel.getHours())+':'+p(rel.getMinutes()),
+    date: rel.getFullYear()+'-'+p(rel.getMonth()+1)+'-'+p(rel.getDate()),
+    sameDay: rel.toDateString()===base.toDateString()
+  };
+}
 function getRaffle(id){ return db.raffles.find(r=>r.id===id) || null; }
 /* ---------- Mercado Pago (opcional, token global) ---------- */
 async function mpCreatePreference(r, numKey, buyer){
@@ -321,6 +348,7 @@ function publicRaffle(r){
   return {
     id:r.id, name:r.name, slogan:r.slogan, color:r.color, status:r.status, currency:r.currency, price:r.price,
     drawDate:r.drawDate, drawTime:r.drawTime, drawNote:r.drawNote, whatsapp:r.whatsapp,
+    autoReleaseMin:Number(r.autoReleaseMin)||0, release:releaseInfo(r),
     prizes:(Array.isArray(r.prizes)?r.prizes:[]).filter(p=>p&&p.enabled).map(p=>({label:p.label,amount:p.amount})),
     breb: (b.enabled ? { enabled:true, llave:b.llave, beneficiary:b.beneficiary, business:b.business,
            qrImage:b.qrImage, requireReceipt:!!b.requireReceipt } : {enabled:false}),
@@ -334,6 +362,7 @@ app.get('/api/home', (req,res)=>{
   const list = db.raffles.filter(r=>r.status!=='hidden').map(r=>({
     id:r.id, name:r.name, slogan:r.slogan, color:r.color, status:r.status, currency:r.currency, price:r.price,
     drawDate:r.drawDate, drawTime:r.drawTime, drawNote:r.drawNote, whatsapp:r.whatsapp,
+    autoReleaseMin:Number(r.autoReleaseMin)||0, release:releaseInfo(r),
     prize: (Array.isArray(r.prizes)?r.prizes:[]).filter(p=>p&&p.enabled)[0]||null,
     counts: counts(r)
   }));
