@@ -171,10 +171,11 @@ function renderShowcasePanel(r){
         '<button class="btn sm" onclick="openConfig()">⚙️ Config</button>'+
       '</div>'+
     '</div>'+
-    '<p class="hint">Esta publicación es una <b>vitrina de premios</b>: muestra la imagen de la lotería y los premios, sin tablero de números.</p>'+
+    '<p class="hint">Esta publicación es una <b>vitrina de premios</b>: muestra la imagen de la lotería y los premios, sin tablero de números. Edita todo en “Config” y luego <b>descárgala como imagen</b> para compartirla por WhatsApp.</p>'+
     '<div style="text-align:center">'+img+'</div>'+
     boxes+
     '<div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">'+
+      '<button class="btn primary" onclick="downloadShowcaseImage()">\u2B07\uFE0F Descargar imagen</button>'+
       '<button class="btn danger" onclick="deleteRaffle()">\u{1F5D1}\uFE0F Borrar esta vitrina</button>'+
     '</div>'+
     '</div>';
@@ -509,6 +510,79 @@ function shareImage(){
   const url=cv.toDataURL('image/png');
   const a=document.createElement('a'); a.href=url; a.download='rifa-'+(r.name||'tablero').replace(/[^a-z0-9]/gi,'_')+'.png'; a.click();
   toast('Imagen descargada 📲');
+}
+
+/* ---------- Imagen de la vitrina (solo premios, sin tablero) ---------- */
+function downloadShowcaseImage(){
+  const r=cur(); if(!r){ return; }
+  const W=1080;
+  const ps=(r.prizes||[]).filter(p=>p&&p.enabled);
+  const cols=ps.length>=2?2:1;
+  const rows=Math.ceil(ps.length/cols);
+  const headH=200;
+  const doDraw=(img)=>{
+    const P=48;
+    let dw=0, dh=0, imgH=0;
+    if(img){
+      const sc=Math.min((W-P*2)/img.width, 520/img.height);
+      dw=img.width*sc; dh=img.height*sc; imgH=dh+30;
+    }
+    const pillH=70;
+    const boxGap=24, boxW=(W-P*2-boxGap*(cols-1))/cols, boxH=150;
+    const prizesH = ps.length? (50 + rows*(boxH+boxGap)) : 0;
+    const H=headH+imgH+pillH+prizesH+90+40;
+    const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+    const x=cv.getContext('2d');
+    const bg=x.createLinearGradient(0,0,W,H); bg.addColorStop(0,'#1a0020'); bg.addColorStop(.5,'#0A000A'); bg.addColorStop(1,'#20002a');
+    x.fillStyle=bg; x.fillRect(0,0,W,H);
+    x.strokeStyle='#FFD700'; x.lineWidth=6; roundRect(x,16,16,W-32,H-32,24); x.stroke();
+    x.textAlign='center';
+    x.font='900 70px Segoe UI,Arial,sans-serif';
+    const lg=x.createLinearGradient(0,60,0,140); lg.addColorStop(0,'#FF66DD'); lg.addColorStop(.5,'#FF00FF'); lg.addColorStop(1,'#FFD700');
+    x.fillStyle=lg; x.shadowColor='rgba(255,0,255,.6)'; x.shadowBlur=24;
+    x.fillText((r.name||'DREAMS RIFA').toUpperCase(),W/2,120); x.shadowBlur=0;
+    if(r.slogan){ x.font='italic 34px Segoe UI,Arial,sans-serif'; x.fillStyle='#FFD700'; x.fillText(r.slogan,W/2,172); }
+    let y=headH;
+    if(img){
+      const dx=(W-dw)/2, dy=y;
+      x.save(); roundRect(x,dx,dy,dw,dh,20); x.clip(); x.drawImage(img,dx,dy,dw,dh); x.restore();
+      x.strokeStyle='#FFD700'; x.lineWidth=4; roundRect(x,dx,dy,dw,dh,20); x.stroke();
+      y+=dh+30;
+    }
+    const fecha=fechaLarga(r.drawDate);
+    const pillTxt=fecha+(r.drawTime?('  \u2022  sorteo '+r.drawTime):'');
+    x.font='700 30px Segoe UI,Arial,sans-serif';
+    const pw=x.measureText(pillTxt).width+70, px=(W-pw)/2;
+    const pg=x.createLinearGradient(px,0,px+pw,0); pg.addColorStop(0,'#FFD700'); pg.addColorStop(1,'#FFE766');
+    x.fillStyle=pg; roundRect(x,px,y,pw,52,26); x.fill();
+    x.fillStyle='#1a0020'; x.fillText(pillTxt,W/2,y+34);
+    y+=70;
+    if(ps.length){
+      x.font='800 36px Segoe UI,Arial,sans-serif'; x.fillStyle='#FFE766'; x.fillText('PREMIOS',W/2,y+6); y+=50;
+      for(let i=0;i<ps.length;i++){
+        const col=i%cols, row=Math.floor(i/cols);
+        const bx=P+col*(boxW+boxGap), by=y+row*(boxH+boxGap);
+        x.fillStyle='rgba(255,255,255,.04)'; roundRect(x,bx,by,boxW,boxH,18); x.fill();
+        x.strokeStyle='#FFD700'; x.lineWidth=3; roundRect(x,bx,by,boxW,boxH,18); x.stroke();
+        x.fillStyle='#f7eaff'; x.font='700 30px Segoe UI,Arial,sans-serif';
+        x.fillText((i===0?'\ud83c\udfc6 ':'\u2728 ')+(ps[i].label||('Premio '+(i+1))),bx+boxW/2,by+58);
+        x.shadowColor='rgba(255,0,255,.5)'; x.shadowBlur=16; x.fillStyle='#FF66DD'; x.font='900 42px Segoe UI,Arial,sans-serif';
+        x.fillText(money(ps[i].amount),bx+boxW/2,by+112); x.shadowBlur=0;
+      }
+      y+=rows*(boxH+boxGap);
+    }
+    x.fillStyle='rgba(247,234,255,.6)'; x.font='22px Segoe UI,Arial,sans-serif';
+    x.fillText('DREAMS RIFA  \u2022  rifa-diaria.onrender.com',W/2,H-46);
+    const url=cv.toDataURL('image/png');
+    const a=document.createElement('a'); a.href=url; a.download='vitrina-'+((r.name||'dreams').replace(/[^a-z0-9]/gi,'_').toLowerCase())+'.png'; a.click();
+    toast('Imagen descargada \ud83d\udcf2');
+  };
+  if(r.lotteryImage){
+    const im=new Image();
+    im.onload=()=>doDraw(im);
+    im.onerror=()=>doDraw(null);
+    im.src=r.lotteryImage;
+  } else { doDraw(null); }
 }
 
 /* ---------- Arranque ---------- */
