@@ -100,8 +100,17 @@ function renderShowcase(){
   sc.style.display='';
   const img = S.lotteryImage ? '<div class="sc-lot"><img src="'+esc(S.lotteryImage)+'" alt="Lotería"></div>' : '';
   const dt = '<div class="sc-date">📅 <b>'+fechaLarga(S.drawDate)+'</b> &nbsp;•&nbsp; 🕒 <b>'+esc(S.drawTime||'')+'</b></div>';
-  sc.innerHTML = img + dt;
+  const toks=(S.showResult?scResultTokens(S.resultNumber):[]);
+  const acc=/^#[0-9a-fA-F]{6}$/.test(S.color||'')?S.color:'#FF00FF';
+  const sq=(S.resultShape==='square');
+  const win = toks.length
+    ? '<div style="text-align:center;margin:14px 0 4px"><div style="font-weight:800;letter-spacing:3px;color:'+acc+';margin-bottom:10px;font-size:15px">RESULTADO</div>'+
+      '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">'+toks.map(t=>
+        '<span style="display:inline-flex;align-items:center;justify-content:center;min-width:60px;height:60px;padding:0 12px;font-weight:900;font-size:28px;color:#111;background:'+acc+';box-shadow:0 0 16px '+acc+';border-radius:'+(sq?'14px':'50%')+'">'+esc(t)+'</span>').join('')+'</div></div>'
+    : '';
+  sc.innerHTML = img + dt + win;
 }
+function scResultTokens(s){ s=String(s||'').trim(); if(!s) return []; if(/[\s\-]/.test(s)) return s.split(/[\s\-]+/).filter(Boolean); return s.split(''); }
 
 function releaseBannerHtml(){
   if(!S || !S.release) return '';

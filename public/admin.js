@@ -148,10 +148,10 @@ function renderPanel(){
     '</div>';
   renderBoard();
 }
+function resultTokens(s){ s=String(s||'').trim(); if(!s) return []; if(/[\s\-]/.test(s)) return s.split(/[\s\-]+/).filter(Boolean); return s.split(''); }
 function renderShowcasePanel(r){
   const idx=DB.raffles.findIndex(x=>x.id===r.id);
-  const prizes=(r.prizes||[]).filter(p=>p&&p.enabled);
-  const badge={active:'ACTIVA',soon:'PRÓXIMA',hidden:'OCULTA'}[r.status]||'';
+  const prizes=(r.prizes||[]).filter(p=>p&&p.enabled);  const badge={active:'ACTIVA',soon:'PRÓXIMA',hidden:'OCULTA'}[r.status]||'';
   const img = r.lotteryImage ? '<img src="'+r.lotteryImage+'" style="max-width:260px;width:100%;border-radius:12px;margin:4px 0">' : '<div class="hint">Aún no has subido la imagen de la lotería. Ábrela en “Config”.</div>';
   const boxes = prizes.length
     ? '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px">'+prizes.map((p,i)=>
@@ -160,6 +160,14 @@ function renderShowcasePanel(r){
           '<div style="color:var(--pri2);font-weight:800;margin-top:4px">'+money(p.amount)+'</div>'+
         '</div>').join('')+'</div>'
     : '<div class="hint">Aún no agregas premios. Ábrelos en “Config”.</div>';
+  const _toks=(r.showResult?resultTokens(r.resultNumber):[]);
+  const _acc=/^#[0-9a-fA-F]{6}$/.test(r.color||'')?r.color:'#FF00FF';
+  const _sq=(r.resultShape==='square');
+  const winHtml=_toks.length
+    ? '<div style="text-align:center;margin:14px 0"><div style="font-weight:800;letter-spacing:2px;color:var(--pri2);margin-bottom:8px">RESULTADO</div>'+
+      '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">'+_toks.map(t=>
+        '<span style="display:inline-flex;align-items:center;justify-content:center;min-width:58px;height:58px;padding:0 10px;font-weight:900;font-size:26px;color:#111;background:'+_acc+';box-shadow:0 0 14px '+_acc+';border-radius:'+(_sq?'12px':'50%')+'">'+esc(t)+'</span>').join('')+'</div></div>'
+    : (r.showResult?'<div class="hint" style="text-align:center">Activaste el resultado pero aún no escribes el número. Ponlo en “Config”.</div>':'');
   $('panel').innerHTML=
     '<div class="panel">'+
     '<div class="rhead">'+
@@ -173,6 +181,7 @@ function renderShowcasePanel(r){
     '</div>'+
     '<p class="hint">Esta publicación es una <b>vitrina de premios</b>: muestra la imagen de la lotería y los premios, sin tablero de números. Edita todo en “Config” y luego <b>descárgala como imagen</b> para compartirla por WhatsApp.</p>'+
     '<div style="text-align:center">'+img+'</div>'+
+    winHtml+
     boxes+
     '<div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">'+
       '<button class="btn primary" onclick="downloadShowcaseImage()">\u2B07\uFE0F Descargar imagen</button>'+
@@ -293,7 +302,14 @@ function openConfig(){
     '<div id="showOnly"><div class="field"><label>Imagen de la lotería</label>'+
       '<div id="lotBox">'+(_lot?'<img class="qr-prev" src="'+_lot+'"><br><button class="btn sm danger" onclick="lotDel()">Quitar imagen</button>':'<button class="btn sm" onclick="$(\'lotFile\').click()">Subir imagen de la lotería</button>')+'</div>'+
       '<input id="lotFile" type="file" accept="image/*" style="display:none" onchange="lotPick(event)">'+
-      '<div class="hint">Sube la imagen de la lotería (como cuando subes el QR). Se muestra arriba de los premios.</div></div></div>'+
+      '<div class="hint">Sube la imagen de la lotería (como cuando subes el QR). Se muestra arriba de los premios.</div></div>'+
+      '<div class="field"><label class="grow"><input type="checkbox" id="cShowResult" '+(r.showResult?'checked':'')+' style="width:auto" onchange="resultUI()"> Mostrar el número ganador en la vitrina</label>'+
+        '<div class="hint">Actívalo cuando ya tengas el resultado. Los dígitos salen en bolitas o cuadritos con tu color del tema.</div></div>'+
+      '<div id="resultBox" '+(r.showResult?'':'style="display:none"')+'>'+
+        '<div class="row"><div class="field"><label>Número ganador</label><input id="cResultNumber" value="'+esc(r.resultNumber||'')+'" placeholder="Ej: 0422" maxlength="20"></div>'+
+          '<div class="field"><label>Forma</label><select id="cResultShape"><option value="circle"'+((r.resultShape!=='square')?' selected':'')+'>Bolitas</option><option value="square"'+((r.resultShape==='square')?' selected':'')+'>Cuadritos</option></select></div></div>'+
+        '<div class="hint">Puedes separar con espacios o guiones (ej: 0 4 2 2). Cada dígito o grupo va en su propia figura.</div></div>'+
+      '</div>'+
     '<div id="numOnly"><div class="row"><div class="field"><label>Precio por número</label><input id="cPrice" type="number" value="'+(r.price||0)+'"></div>'+
       '<div class="field"><label>Moneda</label><input id="cCurrency" value="'+esc(r.currency||'COP')+'"></div></div></div>'+
     '<div class="row"><div class="field"><label>Fecha del sorteo</label><input id="cDate" type="date" value="'+esc(r.drawDate||'')+'" oninput="autoRelHint()"></div>'+
@@ -327,6 +343,7 @@ function applyTypeUI(){
   ['numOnly','numOnly2','numOnly3'].forEach(id=>{ const el=$(id); if(el) el.style.display=show?'none':''; });
   const so=$('showOnly'); if(so) so.style.display=show?'':'none';
 }
+function resultUI(){ const on=!!($('cShowResult')||{}).checked; const box=$('resultBox'); if(box) box.style.display=on?'':'none'; }
 function lotPick(ev){ const f=ev.target.files[0]; if(!f) return; toast('Preparando imagen...'); compressImage(f,{maxSide:800,type:'image/jpeg',quality:0.85}).then(d=>{ _lot=d; const box=$('lotBox'); if(box) box.innerHTML='<img class="qr-prev" src="'+_lot+'"><br><button class="btn sm danger" onclick="lotDel()">Quitar imagen</button>'; toast('Imagen lista. No olvides Guardar.'); }).catch(e=>toast(e.message||'No se pudo cargar la imagen')); }
 function lotDel(){ _lot=''; const box=$('lotBox'); if(box) box.innerHTML='<button class="btn sm" onclick="$(\'lotFile\').click()">Subir imagen de la lotería</button>'; }
 function autoRelHint(){
@@ -374,6 +391,9 @@ async function saveConfig(){
   const mode=(($('cMode')||{}).value)==='showcase'?'showcase':'numbers';
   const body={ raffle:CUR, name:$('cName').value.trim(), slogan:$('cSlogan').value.trim(), color:_color, status:$('cStatus').value,
     mode, lotteryImage:_lot,
+    showResult: !!(($('cShowResult')||{}).checked),
+    resultNumber: (($('cResultNumber')||{}).value||'').trim(),
+    resultShape: ((($('cResultShape')||{}).value)==='square'?'square':'circle'),
     price:Number($('cPrice').value)||0, currency:$('cCurrency').value.trim()||'COP',
     drawDate:$('cDate').value, drawTime:$('cTime').value, drawNote:$('cNote').value.trim(), whatsapp:$('cWhats').value.trim(),
     autoReleaseMin:Number(($('cAutoRel')||{}).value)||0,
@@ -512,25 +532,33 @@ function shareImage(){
   toast('Imagen descargada 📲');
 }
 
-/* ---------- Imagen de la vitrina (solo premios, sin tablero) ---------- */
+/* ---------- Imagen de la vitrina (solo premios / resultado, sin tablero) ---------- */
+function wrapTextLines(x,text,maxW,maxLines){
+  const words=String(text).split(/\s+/).filter(Boolean); const lines=[]; let cur='';
+  for(const w of words){ const t=cur?cur+' '+w:w; if(x.measureText(t).width<=maxW||!cur){ cur=t; } else { lines.push(cur); cur=w; } }
+  if(cur) lines.push(cur);
+  if(lines.length>maxLines){ lines.length=maxLines; let last=lines[maxLines-1]; while(last.length>1 && x.measureText(last+'\u2026').width>maxW){ last=last.slice(0,-1); } lines[maxLines-1]=last+'\u2026'; }
+  return lines;
+}
 function downloadShowcaseImage(){
   const r=cur(); if(!r){ return; }
-  const W=1080;
+  const W=1080, P=48;
+  const acc=/^#[0-9a-fA-F]{6}$/.test(r.color||'')?r.color:'#FF00FF';
   const ps=(r.prizes||[]).filter(p=>p&&p.enabled);
+  const toks=(r.showResult?resultTokens(r.resultNumber):[]);
   const cols=ps.length>=2?2:1;
-  const rows=Math.ceil(ps.length/cols);
+  const prows=Math.ceil(ps.length/cols);
   const headH=200;
+  const pillBlockH=100;
+  const boxGap=24, boxW=(W-P*2-boxGap*(cols-1))/cols, boxH=180;
+  const prizesH = ps.length? (60 + prows*(boxH+boxGap)) : 0;
+  const D=100, cgap=18;
+  const resultH = toks.length? (56 + D + 36) : 0;
+  const footH=90;
   const doDraw=(img)=>{
-    const P=48;
     let dw=0, dh=0, imgH=0;
-    if(img){
-      const sc=Math.min((W-P*2)/img.width, 520/img.height);
-      dw=img.width*sc; dh=img.height*sc; imgH=dh+30;
-    }
-    const pillH=70;
-    const boxGap=24, boxW=(W-P*2-boxGap*(cols-1))/cols, boxH=150;
-    const prizesH = ps.length? (50 + rows*(boxH+boxGap)) : 0;
-    const H=headH+imgH+pillH+prizesH+90+40;
+    if(img){ const sc=Math.min((W-P*2)/img.width, 500/img.height); dw=img.width*sc; dh=img.height*sc; imgH=dh+30; }
+    const H=headH+imgH+pillBlockH+resultH+prizesH+footH;
     const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
     const x=cv.getContext('2d');
     const bg=x.createLinearGradient(0,0,W,H); bg.addColorStop(0,'#1a0020'); bg.addColorStop(.5,'#0A000A'); bg.addColorStop(1,'#20002a');
@@ -543,35 +571,47 @@ function downloadShowcaseImage(){
     x.fillText((r.name||'DREAMS RIFA').toUpperCase(),W/2,120); x.shadowBlur=0;
     if(r.slogan){ x.font='italic 34px Segoe UI,Arial,sans-serif'; x.fillStyle='#FFD700'; x.fillText(r.slogan,W/2,172); }
     let y=headH;
-    if(img){
-      const dx=(W-dw)/2, dy=y;
-      x.save(); roundRect(x,dx,dy,dw,dh,20); x.clip(); x.drawImage(img,dx,dy,dw,dh); x.restore();
-      x.strokeStyle='#FFD700'; x.lineWidth=4; roundRect(x,dx,dy,dw,dh,20); x.stroke();
-      y+=dh+30;
-    }
+    if(img){ const dx=(W-dw)/2, dy=y; x.save(); roundRect(x,dx,dy,dw,dh,20); x.clip(); x.drawImage(img,dx,dy,dw,dh); x.restore(); x.strokeStyle='#FFD700'; x.lineWidth=4; roundRect(x,dx,dy,dw,dh,20); x.stroke(); y+=dh+30; }
     const fecha=fechaLarga(r.drawDate);
     const pillTxt=fecha+(r.drawTime?('  \u2022  sorteo '+r.drawTime):'');
     x.font='700 30px Segoe UI,Arial,sans-serif';
     const pw=x.measureText(pillTxt).width+70, px=(W-pw)/2;
     const pg=x.createLinearGradient(px,0,px+pw,0); pg.addColorStop(0,'#FFD700'); pg.addColorStop(1,'#FFE766');
     x.fillStyle=pg; roundRect(x,px,y,pw,52,26); x.fill();
-    x.fillStyle='#1a0020'; x.fillText(pillTxt,W/2,y+34);
-    y+=70;
+    x.fillStyle='#1a0020'; x.textAlign='center'; x.fillText(pillTxt,W/2,y+34);
+    y+=pillBlockH;
+    if(toks.length){
+      x.fillStyle='#FFE766'; x.font='800 32px Segoe UI,Arial,sans-serif'; x.fillText('RESULTADO',W/2,y+2); y+=46;
+      const totalW=toks.length*D+(toks.length-1)*cgap; let fx=(W-totalW)/2;
+      for(let i=0;i<toks.length;i++){
+        x.save(); x.shadowColor=acc; x.shadowBlur=22; x.fillStyle=acc;
+        if(r.resultShape==='square'){ roundRect(x,fx,y,D,D,16); x.fill(); } else { x.beginPath(); x.arc(fx+D/2,y+D/2,D/2,0,Math.PI*2); x.fill(); }
+        x.restore();
+        x.fillStyle='#111'; x.font='900 '+Math.round(D*0.5)+'px Segoe UI,Arial,sans-serif'; x.textBaseline='middle';
+        x.fillText(String(toks[i]),fx+D/2,y+D/2+2); x.textBaseline='alphabetic';
+        fx+=D+cgap;
+      }
+      y+=D+36;
+    }
     if(ps.length){
-      x.font='800 36px Segoe UI,Arial,sans-serif'; x.fillStyle='#FFE766'; x.fillText('PREMIOS',W/2,y+6); y+=50;
+      x.fillStyle='#FFE766'; x.font='800 36px Segoe UI,Arial,sans-serif'; x.fillText('PREMIOS',W/2,y+6); y+=60;
       for(let i=0;i<ps.length;i++){
         const col=i%cols, row=Math.floor(i/cols);
         const bx=P+col*(boxW+boxGap), by=y+row*(boxH+boxGap);
         x.fillStyle='rgba(255,255,255,.04)'; roundRect(x,bx,by,boxW,boxH,18); x.fill();
         x.strokeStyle='#FFD700'; x.lineWidth=3; roundRect(x,bx,by,boxW,boxH,18); x.stroke();
-        x.fillStyle='#f7eaff'; x.font='700 30px Segoe UI,Arial,sans-serif';
-        x.fillText((i===0?'\ud83c\udfc6 ':'\u2728 ')+(ps[i].label||('Premio '+(i+1))),bx+boxW/2,by+58);
-        x.shadowColor='rgba(255,0,255,.5)'; x.shadowBlur=16; x.fillStyle='#FF66DD'; x.font='900 42px Segoe UI,Arial,sans-serif';
-        x.fillText(money(ps[i].amount),bx+boxW/2,by+112); x.shadowBlur=0;
+        const availW=boxW-32; const icon=(i===0?'\ud83c\udfc6 ':'\u2728 '); const label=icon+(ps[i].label||('Premio '+(i+1)));
+        let fs=30, lines;
+        while(fs>=18){ x.font='700 '+fs+'px Segoe UI,Arial,sans-serif'; lines=wrapTextLines(x,label,availW,2); const over=lines.some(l=>x.measureText(l).width>availW); if(!over) break; fs-=2; }
+        x.fillStyle='#f7eaff'; x.textAlign='center';
+        const lh=fs+8; let ly=by+44;
+        for(const l of lines){ x.fillText(l,bx+boxW/2,ly); ly+=lh; }
+        x.shadowColor='rgba(255,0,255,.5)'; x.shadowBlur=16; x.fillStyle='#FF66DD'; x.font='900 40px Segoe UI,Arial,sans-serif';
+        x.fillText(money(ps[i].amount),bx+boxW/2,by+boxH-26); x.shadowBlur=0;
       }
-      y+=rows*(boxH+boxGap);
+      y+=prows*(boxH+boxGap);
     }
-    x.fillStyle='rgba(247,234,255,.6)'; x.font='22px Segoe UI,Arial,sans-serif';
+    x.fillStyle='rgba(247,234,255,.6)'; x.font='22px Segoe UI,Arial,sans-serif'; x.textAlign='center';
     x.fillText('DREAMS RIFA  \u2022  rifa-diaria.onrender.com',W/2,H-46);
     const url=cv.toDataURL('image/png');
     const a=document.createElement('a'); a.href=url; a.download='vitrina-'+((r.name||'dreams').replace(/[^a-z0-9]/gi,'_').toLowerCase())+'.png'; a.click();
