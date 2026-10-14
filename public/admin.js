@@ -10,6 +10,45 @@ function esc(s){return (s==null?'':String(s)).replace(/[&<>\"']/g,m=>({'&':'&amp
 function cur(){ return (DB&&DB.raffles||[]).find(r=>r.id===CUR)||null; }
 function money(n){const r=cur();return (r?r.currency:'')+' '+Number(n||0).toLocaleString('es-CO');}
 function fechaLarga(d){ try{ return new Date(d+'T00:00:00').toLocaleDateString('es',{weekday:'long',day:'numeric',month:'long'}); }catch(e){ return d||''; } }
+/* Comprime una imagen en el navegador antes de subirla, para que cada imagen
+   quepa en su caja de la nube (tope ~100KB). Reduce el tamano y, si hace falta,
+   baja la calidad. Devuelve el dataURI listo para enviar. */
+function compressImage(file, opts){
+  opts = opts || {};
+  const maxSide = opts.maxSide || 600;
+  const prefer  = opts.type || 'image/png';   // tipo preferido ('image/png' conserva nitidez del QR)
+  const quality = opts.quality || 0.92;
+  const LIMIT   = 98000;                       // caracteres del dataURI (~ bytes del registro JSONBin)
+  return new Promise((resolve, reject)=>{
+    const rd = new FileReader();
+    rd.onerror = ()=>reject(new Error('No se pudo leer la imagen'));
+    rd.onload = ()=>{
+      const img = new Image();
+      img.onerror = ()=>reject(new Error('Imagen no valida'));
+      img.onload = ()=>{
+        const render = (side, type, q)=>{
+          const sc = Math.min(1, side/Math.max(img.width, img.height));
+          const w = Math.max(1, Math.round(img.width*sc)), h = Math.max(1, Math.round(img.height*sc));
+          const cv = document.createElement('canvas'); cv.width=w; cv.height=h;
+          const cx = cv.getContext('2d');
+          if(type==='image/jpeg'){ cx.fillStyle='#fff'; cx.fillRect(0,0,w,h); }  // JPEG no tiene transparencia
+          cx.drawImage(img, 0, 0, w, h);
+          return cv.toDataURL(type, q);
+        };
+        let out = render(maxSide, prefer, quality);
+        // si pesa de mas, pasamos a JPEG y vamos bajando calidad
+        let q = quality;
+        while(out.length > LIMIT && q > 0.4){ q -= 0.1; out = render(maxSide, 'image/jpeg', q); }
+        // si todavia pesa, reducimos tambien el tamano
+        let side = maxSide;
+        while(out.length > LIMIT && side > 240){ side = Math.round(side*0.8); out = render(side, 'image/jpeg', 0.7); }
+        resolve(out);
+      };
+      img.src = rd.result;
+    };
+    rd.readAsDataURL(file);
+  });
+}
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2800);}
 function openModal(h){const m=$('modal');m.innerHTML='<button class="close">×</button>'+h;m.querySelector('.close').onclick=closeModal;$('mbg').classList.add('show');m.classList.add('show');}
 function closeModal(){$('modal').classList.remove('show');$('mbg').classList.remove('show');}
@@ -266,7 +305,7 @@ function renderColorBox(){
   ).join('');
 }
 function pickColor(hex){ _color=hex; renderColorBox(); }
-function qrPick(ev){ const f=ev.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{ _qr=rd.result; const box=$('qrBox'); if(box) box.innerHTML='<img class="qr-prev" src="'+_qr+'"><br><button class="btn sm danger" onclick="qrDel()">Quitar QR</button>'; }; rd.readAsDataURL(f); }
+function qrPick(ev){ const f=ev.target.files[0]; if(!f) return; toast('Preparando imagen...'); compressImage(f,{maxSide:620,type:'image/png',quality:0.92}).then(d=>{ _qr=d; const box=$('qrBox'); if(box) box.innerHTML='<img class="qr-prev" src="'+_qr+'"><br><button class="btn sm danger" onclick="qrDel()">Quitar QR</button>'; toast('QR listo. No olvides Guardar cambios.'); }).catch(e=>toast(e.message||'No se pudo cargar la imagen')); }
 function qrDel(){ _qr=''; const box=$('qrBox'); if(box) box.innerHTML='<button class="btn sm" onclick="$(\'qrFile\').click()">Subir imagen QR</button>'; }
 async function saveConfig(){
   const prizes=_prizes.map(p=>({label:(p.label||'').trim(),amount:Number(p.amount)||0,enabled:!!p.enabled}));
@@ -303,7 +342,7 @@ function renderLogoBox(){
     '<button class="btn sm" onclick="lgDefault()">Usar logo DREAMS</button> '+
     (_logo?'<button class="btn sm danger" onclick="lgDel()">Quitar</button>':'');
 }
-function lgPick(ev){ const f=ev.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{ _logo=rd.result; renderLogoBox(); }; rd.readAsDataURL(f); }
+function lgPick(ev){ const f=ev.target.files[0]; if(!f) return; toast('Preparando imagen...'); compressImage(f,{maxSide:380,type:'image/png',quality:0.92}).then(d=>{ _logo=d; renderLogoBox(); toast('Logo listo. No olvides Guardar.'); }).catch(e=>toast(e.message||'No se pudo cargar la imagen')); }
 function lgDefault(){ _logo='/logo.png'; renderLogoBox(); }
 function lgDel(){ _logo=''; renderLogoBox(); }
 function renderGroups(){
