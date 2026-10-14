@@ -110,13 +110,27 @@ function slimForRemote(){
   });
   return c;
 }
+let remoteBusy=false, remoteDirty=false;
 async function remotePut(){
   if(!USE_REMOTE) return;
+  if(remoteBusy){ remoteDirty=true; return; }      // ya hay un guardado en curso: se reintenta luego con el estado mas reciente
+  remoteBusy=true; remoteDirty=false;
   try{
-    await fetch(RB_URL, { method:'PUT',
+    const r = await fetch(RB_URL, { method:'PUT',
       headers:{ 'Content-Type':'application/json', 'X-Master-Key':RB_KEY },
       body: JSON.stringify(slimForRemote()) });
-  }catch(e){ console.error('[nube] no se pudo guardar:', e.message); }
+    if(!r.ok){
+      const t = await r.text().catch(()=>'');
+      console.error('[nube] NO se guardo (HTTP '+r.status+'): '+t.slice(0,200));
+      remoteDirty=true;   // reintentar
+    } else {
+      console.log('[nube] cambios guardados en la nube OK');
+    }
+  }catch(e){ console.error('[nube] no se pudo guardar:', e.message); remoteDirty=true; }
+  finally{
+    remoteBusy=false;
+    if(remoteDirty){ clearTimeout(remoteTimer); remoteTimer=setTimeout(remotePut,1000); }
+  }
 }
 
 // Normaliza y MIGRA datos viejos (rifa unica) al nuevo formato (varias rifas).
@@ -172,8 +186,22 @@ let saveTimer=null, remoteTimer=null;
 function save(){
   clearTimeout(saveTimer);
   saveTimer=setTimeout(()=>{ try{ fs.writeFileSync(DB_FILE, JSON.stringify(db,null,2)); }catch(e){} },120);
-  if(USE_REMOTE){ clearTimeout(remoteTimer); remoteTimer=setTimeout(remotePut,1500); }
+  if(USE_REMOTE){ clearTimeout(remoteTimer); remoteTimer=setTimeout(remotePut,500); }
 }
+// Guarda TODO (disco + nube) antes de que el servicio se cierre o se redespliegue.
+async function flushAll(){
+  try{ fs.writeFileSync(DB_FILE, JSON.stringify(db,null,2)); }catch(e){}
+  try{ if(USE_REMOTE){ remoteBusy=false; await remotePut(); } }catch(e){}
+}
+let shuttingDown=false;
+function onShutdown(sig){
+  if(shuttingDown) return; shuttingDown=true;
+  console.log('[nube] senal '+sig+' recibida: guardando antes de cerrar...');
+  flushAll().finally(()=>process.exit(0));
+  setTimeout(()=>process.exit(0), 4000);   // salvavidas por si la red se cuelga
+}
+process.on('SIGTERM', ()=>onShutdown('SIGTERM'));
+process.on('SIGINT',  ()=>onShutdown('SIGINT'));
 function getRaffle(id){ return db.raffles.find(r=>r.id===id) || null; }
 /* ---------- Mercado Pago (opcional, token global) ---------- */
 async function mpCreatePreference(r, numKey, buyer){
@@ -398,7 +426,7 @@ app.post('/api/admin/raffle/update', auth, (req,res)=>{
   if(b.drawNote!=null) r.drawNote = String(b.drawNote).slice(0,80);
   if(b.whatsapp!=null) r.whatsapp = String(b.whatsapp).slice(0,300);
   if(Array.isArray(b.prizes)){
-    r.prizes = b.prizes.slice(0,4).map(p=>({
+    r.prizes = b.prizes.slice(0,10).map(p=>({
       label:String((p&&p.label)||'').slice(0,60), amount:Number((p&&p.amount)||0)||0, enabled:!!(p&&p.enabled) }));
   }
   if(b.breb){
