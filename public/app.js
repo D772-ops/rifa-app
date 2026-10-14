@@ -34,6 +34,7 @@ function renderCards(){
   if(list.length===0){ box.innerHTML='<div class="empty">Aún no hay rifas publicadas. Vuelve pronto 💜</div>'; return; }
   list.forEach(r=>{
     const soon = r.status==='soon';
+    const show = r.mode==='showcase';
     const card=document.createElement(soon?'div':'button');
     card.className='rcard'+(soon?' soon':'');
     const col=/^#[0-9a-fA-F]{6}$/.test(r.color||'')?r.color:'#FF00FF';
@@ -45,13 +46,14 @@ function renderCards(){
     const slo = r.slogan ? '<div class="rslo">'+esc(r.slogan)+'</div>' : '';
     const prize = r.prize ? '<div class="rmeta">🏆 Premio mayor: <span class="rprize">'+money(r.currency,r.prize.amount)+'</span></div>' : '';
     const chips = '<div class="rchips">'+
-      '<span class="chip">🎫 <b>'+money(r.currency,r.price)+'</b></span>'+
+      (show?'':'<span class="chip">🎫 <b>'+money(r.currency,r.price)+'</b></span>')+
       '<span class="chip">📅 <b>'+fechaLarga(r.drawDate)+'</b></span>'+
       '<span class="chip">🕒 <b>'+esc(r.drawTime||'')+'</b></span>'+
       (r.drawNote?'<span class="chip">'+esc(r.drawNote)+'</span>':'')+
       '</div>';
-    const go = soon ? '' : '<span class="rgo">Participar →</span>';
-    card.innerHTML='<div class="rtop"><span class="rname">'+esc(r.name)+'</span>'+badge+'</div>'+slo+prize+chips+'<div class="rmeta">'+r.counts.libre+' libres • '+r.counts.res+' reservados • '+r.counts.pag+' pagados</div>'+go;
+    const go = soon ? '' : '<span class="rgo">'+(show?'Ver premios →':'Participar →')+'</span>';
+    const foot = show ? '' : '<div class="rmeta">'+r.counts.libre+' libres • '+r.counts.res+' reservados • '+r.counts.pag+' pagados</div>';
+    card.innerHTML='<div class="rtop"><span class="rname">'+esc(r.name)+'</span>'+badge+'</div>'+slo+prize+chips+foot+go;
     const _nm=card.querySelector('.rname'); if(_nm) _nm.style.color=col;
     const _go=card.querySelector('.rgo'); if(_go) _go.style.color=col;
     box.appendChild(card);
@@ -74,6 +76,10 @@ async function loadBoard(){
   if(S.error){ toast('Esta rifa ya no existe'); goHome(); return; }
   document.title=(S.name||'DREAMS RIFA');
   applyRaffleTheme(S.color);
+  if(S.mode==='showcase'){ renderShowcase(); return; }
+  const bd=$('board'); if(bd) bd.style.display='';
+  const sc=$('showcase'); if(sc) sc.style.display='none';
+  const sb=$('shareBtn'); if(sb) sb.classList.remove('hidden');
   renderPrizes();
   const wa=$('waBtn');
   if(S.whatsapp){ wa.href=S.whatsapp; wa.classList.remove('hidden'); $('waBtnLabel').textContent='Unirme al grupo de «'+(S.name||'la rifa')+'»'; }
@@ -81,6 +87,22 @@ async function loadBoard(){
   $('banner').innerHTML='<b>'+esc(S.name)+'</b> &nbsp;•&nbsp; Valor por número <b>'+money(S.currency,S.price)+'</b> &nbsp;•&nbsp; Sorteo <b>'+esc(S.drawTime||'')+'</b> del <b>'+fechaLarga(S.drawDate)+'</b>'+(S.drawNote?' &nbsp;•&nbsp; '+esc(S.drawNote):'')+releaseBannerHtml();
   renderBoard();
 }
+function renderShowcase(){
+  const bd=$('board'); if(bd) bd.style.display='none';
+  const sb=$('shareBtn'); if(sb) sb.classList.add('hidden');
+  renderPrizes();
+  const wa=$('waBtn');
+  if(S.whatsapp){ wa.href=S.whatsapp; wa.classList.remove('hidden'); $('waBtnLabel').textContent='Unirme al grupo de «'+(S.name||'la rifa')+'»'; }
+  else wa.classList.add('hidden');
+  $('banner').innerHTML='<b>'+esc(S.name)+'</b>'+(S.slogan?' &nbsp;•&nbsp; '+esc(S.slogan):'')+' &nbsp;•&nbsp; Sorteo <b>'+esc(S.drawTime||'')+'</b> del <b>'+fechaLarga(S.drawDate)+'</b>'+(S.drawNote?' &nbsp;•&nbsp; '+esc(S.drawNote):'');
+  let sc=$('showcase');
+  if(!sc){ sc=document.createElement('div'); sc.id='showcase'; const pz=$('prizes'); pz.parentNode.insertBefore(sc,pz); }
+  sc.style.display='';
+  const img = S.lotteryImage ? '<div class="sc-lot"><img src="'+esc(S.lotteryImage)+'" alt="Lotería"></div>' : '';
+  const dt = '<div class="sc-date">📅 <b>'+fechaLarga(S.drawDate)+'</b> &nbsp;•&nbsp; 🕒 <b>'+esc(S.drawTime||'')+'</b></div>';
+  sc.innerHTML = img + dt;
+}
+
 function releaseBannerHtml(){
   if(!S || !S.release) return '';
   const r=S.release;
@@ -189,6 +211,7 @@ async function doClaim(num, requireReceipt){
 function countStatus(){ let libre=0,res=0,pag=0; for(let i=0;i<100;i++){const s=S.numbers[pad(i)].status; if(s==='paid')pag++; else if(s==='reserved')res++; else libre++;} return {libre,res,pag}; }
 function rr(x,X,Y,w,h,r){x.beginPath();x.moveTo(X+r,Y);x.arcTo(X+w,Y,X+w,Y+h,r);x.arcTo(X+w,Y+h,X,Y+h,r);x.arcTo(X,Y+h,X,Y,r);x.arcTo(X,Y,X+w,Y,r);x.closePath();}
 function shareImage(){
+  if(S && S.mode==='showcase'){ toast('La vitrina no genera imagen de tablero 😉'); return; }
   if(!S){ toast('Espera, cargando...'); return; }
   const W=1080, pad0=48, cols=10, gap=12;
   const gridW=W-pad0*2, cell=(gridW-gap*(cols-1))/cols;

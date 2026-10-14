@@ -103,6 +103,7 @@ function renderTabs(){
        '<span class="dot '+r.status+'"></span>'+esc(r.name)+'</div>';
   });
   h+='<div class="rtab add" onclick="createRaffle()">+ Crear rifa</div>';
+  h+='<div class="rtab add" onclick="createShowcase()">+ Crear vitrina (solo premios)</div>';
   $('rtabs').innerHTML=h;
 }
 function selectRaffle(id){ CUR=id; renderTabs(); renderPanel(); }
@@ -110,6 +111,7 @@ function selectRaffle(id){ CUR=id; renderTabs(); renderPanel(); }
 function renderPanel(){
   const r=cur();
   if(!r){ $('panel').innerHTML='<div class="panel" style="text-align:center;color:var(--mut)">No tienes rifas todavía.<br><br><button class="btn primary" onclick="createRaffle()">+ Crear tu primera rifa</button></div>'; return; }
+  if(r.mode==='showcase'){ return renderShowcasePanel(r); }
   const c=counts(r);
   const statusTxt={active:'Activa (visible y jugando)',soon:'Próximamente',hidden:'Oculta'};
   const idx=DB.raffles.findIndex(x=>x.id===r.id);
@@ -145,6 +147,37 @@ function renderPanel(){
     '</div>'+
     '</div>';
   renderBoard();
+}
+function renderShowcasePanel(r){
+  const idx=DB.raffles.findIndex(x=>x.id===r.id);
+  const prizes=(r.prizes||[]).filter(p=>p&&p.enabled);
+  const badge={active:'ACTIVA',soon:'PRÓXIMA',hidden:'OCULTA'}[r.status]||'';
+  const img = r.lotteryImage ? '<img src="'+r.lotteryImage+'" style="max-width:260px;width:100%;border-radius:12px;margin:4px 0">' : '<div class="hint">Aún no has subido la imagen de la lotería. Ábrela en “Config”.</div>';
+  const boxes = prizes.length
+    ? '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px">'+prizes.map((p,i)=>
+        '<div style="flex:1 1 160px;min-width:150px;border:1px solid var(--line);border-radius:12px;padding:12px;background:rgba(255,255,255,.03)">'+
+          '<div style="font-weight:700">'+(i===0?'\u{1F3C6} ':'\u2728 ')+esc(p.label||'Premio '+(i+1))+'</div>'+
+          '<div style="color:var(--pri2);font-weight:800;margin-top:4px">'+money(p.amount)+'</div>'+
+        '</div>').join('')+'</div>'
+    : '<div class="hint">Aún no agregas premios. Ábrelos en “Config”.</div>';
+  $('panel').innerHTML=
+    '<div class="panel">'+
+    '<div class="rhead">'+
+      '<div><span class="nm">'+esc(r.name)+'</span> <span class="badge '+r.status+'">'+badge+'</span> <span class="badge soon">\u{1F3B0} VITRINA</span>'+
+        '<div class="sub">'+esc(fechaLarga(r.drawDate))+' · sorteo '+esc(r.drawTime||'')+(r.drawNote?' · '+esc(r.drawNote):'')+'</div></div>'+
+      '<div class="tools">'+
+        '<button class="btn sm" onclick="moveRaffle(\'up\')" '+(idx<=0?'disabled style=opacity:.4':'')+'>↑</button>'+
+        '<button class="btn sm" onclick="moveRaffle(\'down\')" '+(idx>=DB.raffles.length-1?'disabled style=opacity:.4':'')+'>↓</button>'+
+        '<button class="btn sm" onclick="openConfig()">⚙️ Config</button>'+
+      '</div>'+
+    '</div>'+
+    '<p class="hint">Esta publicación es una <b>vitrina de premios</b>: muestra la imagen de la lotería y los premios, sin tablero de números.</p>'+
+    '<div style="text-align:center">'+img+'</div>'+
+    boxes+
+    '<div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">'+
+      '<button class="btn danger" onclick="deleteRaffle()">\u{1F5D1}\uFE0F Borrar esta vitrina</button>'+
+    '</div>'+
+    '</div>';
 }
 function renderBoard(){
   const r=cur(); let h='';
@@ -212,6 +245,18 @@ async function doCreateRaffle(){
   const r=await api('/api/admin/raffle/create',{name});
   closeModal(); CUR=r.raffle.id; await loadAndRender(); toast('Rifa creada'); openConfig();
 }
+async function createShowcase(){
+  openModal('<h2>Crear vitrina de premios</h2>'+
+    '<p class="hint">Una vitrina muestra <b>solo los premios</b> y la imagen de la lotería, sin tablero de números para reservar. Ideal para loterías que no quieres montar número por número.</p>'+
+    '<div class="field"><label>Nombre</label><input id="crName" placeholder="Ej: Lotería de Boyacá"></div>'+
+    '<div class="btns"><button class="btn primary" onclick="doCreateShowcase()">Crear vitrina</button></div>');
+  setTimeout(()=>$('crName')&&$('crName').focus(),50);
+}
+async function doCreateShowcase(){
+  const name=$('crName').value.trim()||'Nueva vitrina';
+  const r=await api('/api/admin/raffle/create',{name,mode:'showcase'});
+  closeModal(); CUR=r.raffle.id; await loadAndRender(); toast('Vitrina creada'); openConfig();
+}
 async function deleteRaffle(){
   const r=cur();
   if(!confirm('¿Borrar la rifa “'+r.name+'”? Esto elimina su tablero y participantes. No se puede deshacer.')) return;
@@ -224,49 +269,65 @@ async function resetRaffle(){
 }
 async function clearWinner(){ await api('/api/admin/clear-winner',{raffle:CUR}); await loadAndRender(); }
 /* ---------- Configuración de la rifa ---------- */
-let _qr='';
+let _qr='', _lot='';
 function openConfig(){
-  const r=cur(); _qr = (r.breb&&r.breb.qrImage)||'';
+  const r=cur(); _qr = (r.breb&&r.breb.qrImage)||''; _lot = r.lotteryImage||'';
   _color = /^#[0-9a-fA-F]{6}$/.test(r.color||'') ? r.color : '#FF00FF';
   const b=r.breb||{};
+  const mode = (r.mode==='showcase')?'showcase':'numbers';
   _prizes = (r.prizes||[]).map(p=>({label:p.label||'',amount:p.amount||0,enabled:!!p.enabled}));
   if(!_prizes.length) _prizes.push({label:'',amount:0,enabled:true});
-  const h='<h2>⚙️ Configurar rifa</h2>'+
-    '<div class="field"><label>Nombre de la rifa</label><input id="cName" value="'+esc(r.name)+'"></div>'+
+  const h='<h2>⚙️ Configurar '+(mode==='showcase'?'vitrina':'rifa')+'</h2>'+
+    '<div class="field"><label>Tipo de publicación</label><select id="cMode" onchange="applyTypeUI()">'+
+      '<option value="numbers"'+(mode==='numbers'?' selected':'')+'>Rifa con números (tablero para reservar)</option>'+
+      '<option value="showcase"'+(mode==='showcase'?' selected':'')+'>Solo premios (vitrina con imagen de lotería)</option>'+
+      '</select><div class="hint">La <b>vitrina</b> solo muestra la imagen de la lotería y los premios, sin tablero de números.</div></div>'+
+    '<div class="field"><label>Nombre</label><input id="cName" value="'+esc(r.name)+'"></div>'+
     '<div class="field"><label>Frase / eslogan</label><input id="cSlogan" value="'+esc(r.slogan||'')+'"></div>'+
-    '<div class="field"><label>Color neón de la rifa</label><div id="colorBox"></div></div>'+
+    '<div class="field"><label>Color neón</label><div id="colorBox"></div></div>'+
     '<div class="field"><label>Estado</label><select id="cStatus">'+
-      '<option value="active"'+(r.status==='active'?' selected':'')+'>Activa (visible y jugando)</option>'+
+      '<option value="active"'+(r.status==='active'?' selected':'')+'>Activa (visible)</option>'+
       '<option value="soon"'+(r.status==='soon'?' selected':'')+'>Próximamente (se muestra pero no se juega)</option>'+
       '<option value="hidden"'+(r.status==='hidden'?' selected':'')+'>Oculta (no aparece en la página)</option></select></div>'+
-    '<div class="row"><div class="field"><label>Precio por número</label><input id="cPrice" type="number" value="'+(r.price||0)+'"></div>'+
-      '<div class="field"><label>Moneda</label><input id="cCurrency" value="'+esc(r.currency||'COP')+'"></div></div>'+
+    '<div id="showOnly"><div class="field"><label>Imagen de la lotería</label>'+
+      '<div id="lotBox">'+(_lot?'<img class="qr-prev" src="'+_lot+'"><br><button class="btn sm danger" onclick="lotDel()">Quitar imagen</button>':'<button class="btn sm" onclick="$(\'lotFile\').click()">Subir imagen de la lotería</button>')+'</div>'+
+      '<input id="lotFile" type="file" accept="image/*" style="display:none" onchange="lotPick(event)">'+
+      '<div class="hint">Sube la imagen de la lotería (como cuando subes el QR). Se muestra arriba de los premios.</div></div></div>'+
+    '<div id="numOnly"><div class="row"><div class="field"><label>Precio por número</label><input id="cPrice" type="number" value="'+(r.price||0)+'"></div>'+
+      '<div class="field"><label>Moneda</label><input id="cCurrency" value="'+esc(r.currency||'COP')+'"></div></div></div>'+
     '<div class="row"><div class="field"><label>Fecha del sorteo</label><input id="cDate" type="date" value="'+esc(r.drawDate||'')+'" oninput="autoRelHint()"></div>'+
       '<div class="field"><label>Hora del sorteo</label><input id="cTime" type="time" value="'+esc(r.drawTime||'')+'" oninput="autoRelHint()"></div></div>'+
     '<div class="field"><label>Nota del sorteo (libre)</label><input id="cNote" value="'+esc(r.drawNote||'')+'" placeholder="Ej: Sorteo cada domingo con la lotería"></div>'+
-    '<div class="field"><label>Liberar automáticamente los números reservados SIN pago antes del sorteo</label>'+
+    '<div id="numOnly2"><div class="field"><label>Liberar automáticamente los números reservados SIN pago antes del sorteo</label>'+
       '<div class="row" style="align-items:center">'+
         '<input id="cAutoRel" type="number" min="0" max="1440" step="1" style="flex:0 0 120px" value="'+(Number(r.autoReleaseMin)||0)+'" oninput="autoRelHint()">'+
         '<span style="color:var(--mut)">minutos antes del sorteo</span>'+
       '</div>'+
       '<div class="hint" id="autoRelHint"></div>'+
-      '<div class="hint">Escribe los minutos que quieras (ej: 5, 20, 90). Pon <b>0</b> para desactivar y liberar los números tú misma. Solo libera los números <b>reservados sin comprobante</b>: NO toca los pagados ni los que esperan aprobación de pago.</div></div>'+
-    '<div class="field"><label>Enlace del grupo de WhatsApp de esta rifa</label><input id="cWhats" value="'+esc(r.whatsapp||'')+'" placeholder="https://chat.whatsapp.com/..."></div>'+
+      '<div class="hint">Escribe los minutos que quieras (ej: 5, 20, 90). Pon <b>0</b> para desactivar y liberar los números tú misma. Solo libera los <b>reservados sin comprobante</b>: NO toca los pagados ni los que esperan aprobación.</div></div></div>'+
+    '<div class="field"><label>Enlace del grupo de WhatsApp</label><input id="cWhats" value="'+esc(r.whatsapp||'')+'" placeholder="https://chat.whatsapp.com/..."></div>'+
     '<div class="field"><label>Premios (hasta 10)</label><div id="prizeBox"></div>'+
       '<button type="button" class="btn sm" style="margin-top:8px" onclick="prizeAdd()">+ Agregar premio</button>'+
-      '<div class="hint">Marca la casilla de cada premio que quieras mostrar en la página y en la imagen.</div></div>'+
-    '<hr style="border:none;border-top:1px solid var(--line);margin:14px 0">'+
-    '<div class="field"><label class="grow"><input type="checkbox" id="bEn" '+(b.enabled?'checked':'')+' style="width:auto"> Aceptar pagos por Bre-B / transferencia en esta rifa</label></div>'+
+      '<div class="hint">Marca la casilla de cada premio que quieras mostrar. El nombre y el valor son editables.</div></div>'+
+    '<div id="numOnly3"><hr style="border:none;border-top:1px solid var(--line);margin:14px 0">'+
+    '<div class="field"><label class="grow"><input type="checkbox" id="bEn" '+(b.enabled?'checked':'')+' style="width:auto"> Aceptar pagos por Bre-B / transferencia</label></div>'+
     '<div class="field"><label>Llave Bre-B</label><input id="bKey" value="'+esc(b.llave||'')+'" placeholder="@tullave o número"></div>'+
     '<div class="field"><label>Nombre de quien recibe</label><input id="bBen" value="'+esc(b.beneficiary||'')+'"></div>'+
     '<div class="field"><label>Negocio / banco (opcional)</label><input id="bBiz" value="'+esc(b.business||'')+'"></div>'+
     '<div class="field"><label class="grow"><input type="checkbox" id="bRcpt" '+(b.requireReceipt?'checked':'')+' style="width:auto"> Pedir que el cliente suba el comprobante</label></div>'+
     '<div class="field"><label>Imagen QR de pago (opcional)</label>'+
       '<div id="qrBox">'+(_qr?'<img class="qr-prev" src="'+_qr+'"><br><button class="btn sm danger" onclick="qrDel()">Quitar QR</button>':'<button class="btn sm" onclick="$(\'qrFile\').click()">Subir imagen QR</button>')+'</div>'+
-      '<input id="qrFile" type="file" accept="image/*" style="display:none" onchange="qrPick(event)"></div>'+
+      '<input id="qrFile" type="file" accept="image/*" style="display:none" onchange="qrPick(event)"></div></div>'+
     '<div class="btns"><button class="btn primary" onclick="saveConfig()">Guardar cambios</button></div>';
-  openModal(h); renderColorBox(); renderPrizeBox(); autoRelHint();
+  openModal(h); renderColorBox(); renderPrizeBox(); autoRelHint(); applyTypeUI();
 }
+function applyTypeUI(){
+  const mode=(($('cMode')||{}).value)||'numbers', show=(mode==='showcase');
+  ['numOnly','numOnly2','numOnly3'].forEach(id=>{ const el=$(id); if(el) el.style.display=show?'none':''; });
+  const so=$('showOnly'); if(so) so.style.display=show?'':'none';
+}
+function lotPick(ev){ const f=ev.target.files[0]; if(!f) return; toast('Preparando imagen...'); compressImage(f,{maxSide:800,type:'image/jpeg',quality:0.85}).then(d=>{ _lot=d; const box=$('lotBox'); if(box) box.innerHTML='<img class="qr-prev" src="'+_lot+'"><br><button class="btn sm danger" onclick="lotDel()">Quitar imagen</button>'; toast('Imagen lista. No olvides Guardar.'); }).catch(e=>toast(e.message||'No se pudo cargar la imagen')); }
+function lotDel(){ _lot=''; const box=$('lotBox'); if(box) box.innerHTML='<button class="btn sm" onclick="$(\'lotFile\').click()">Subir imagen de la lotería</button>'; }
 function autoRelHint(){
   const box=$('autoRelHint'); if(!box) return;
   const mins=Number(($('cAutoRel')||{}).value)||0;
@@ -309,7 +370,9 @@ function qrPick(ev){ const f=ev.target.files[0]; if(!f) return; toast('Preparand
 function qrDel(){ _qr=''; const box=$('qrBox'); if(box) box.innerHTML='<button class="btn sm" onclick="$(\'qrFile\').click()">Subir imagen QR</button>'; }
 async function saveConfig(){
   const prizes=_prizes.map(p=>({label:(p.label||'').trim(),amount:Number(p.amount)||0,enabled:!!p.enabled}));
+  const mode=(($('cMode')||{}).value)==='showcase'?'showcase':'numbers';
   const body={ raffle:CUR, name:$('cName').value.trim(), slogan:$('cSlogan').value.trim(), color:_color, status:$('cStatus').value,
+    mode, lotteryImage:_lot,
     price:Number($('cPrice').value)||0, currency:$('cCurrency').value.trim()||'COP',
     drawDate:$('cDate').value, drawTime:$('cTime').value, drawNote:$('cNote').value.trim(), whatsapp:$('cWhats').value.trim(),
     autoReleaseMin:Number(($('cAutoRel')||{}).value)||0,
