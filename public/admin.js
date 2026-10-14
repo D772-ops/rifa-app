@@ -205,6 +205,12 @@ function openConfig(){
     '<div class="row"><div class="field"><label>Fecha del sorteo</label><input id="cDate" type="date" value="'+esc(r.drawDate||'')+'"></div>'+
       '<div class="field"><label>Hora del sorteo</label><input id="cTime" type="time" value="'+esc(r.drawTime||'')+'"></div></div>'+
     '<div class="field"><label>Nota del sorteo (libre)</label><input id="cNote" value="'+esc(r.drawNote||'')+'" placeholder="Ej: Sorteo cada domingo con la lotería"></div>'+
+    '<div class="field"><label>Liberar automáticamente los números reservados SIN pago antes del sorteo</label>'+
+      '<select id="cAutoRel">'+
+        [[0,'Desactivado (los libero yo a mano)'],[5,'5 minutos antes'],[10,'10 minutos antes'],[15,'15 minutos antes'],[30,'30 minutos antes'],[60,'1 hora antes'],[120,'2 horas antes']]
+          .map(o=>'<option value="'+o[0]+'"'+((Number(r.autoReleaseMin)||0)===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+
+      '</select>'+
+      '<div class="hint">Solo libera los números <b>reservados sin comprobante</b>. NO toca los pagados ni los que esperan aprobación de pago.</div></div>'+
     '<div class="field"><label>Enlace del grupo de WhatsApp de esta rifa</label><input id="cWhats" value="'+esc(r.whatsapp||'')+'" placeholder="https://chat.whatsapp.com/..."></div>'+
     '<div class="field"><label>Premios (hasta 10)</label><div id="prizeBox"></div>'+
       '<button type="button" class="btn sm" style="margin-top:8px" onclick="prizeAdd()">+ Agregar premio</button>'+
@@ -251,6 +257,7 @@ async function saveConfig(){
   const body={ raffle:CUR, name:$('cName').value.trim(), slogan:$('cSlogan').value.trim(), color:_color, status:$('cStatus').value,
     price:Number($('cPrice').value)||0, currency:$('cCurrency').value.trim()||'COP',
     drawDate:$('cDate').value, drawTime:$('cTime').value, drawNote:$('cNote').value.trim(), whatsapp:$('cWhats').value.trim(),
+    autoReleaseMin:Number(($('cAutoRel')||{}).value)||0,
     prizes,
     breb:{ enabled:$('bEn').checked, llave:$('bKey').value.trim(), beneficiary:$('bBen').value.trim(),
       business:$('bBiz').value.trim(), requireReceipt:$('bRcpt').checked, qrImage:_qr } };
