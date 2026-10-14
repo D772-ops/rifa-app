@@ -57,6 +57,7 @@ function newRaffle(name){
     id: uid(),
     name: name || 'Nueva rifa',
     slogan: 'La suerte tambien se gana',
+    color: '#FF00FF',            // color neon de la rifa (acento visual)
     status: 'active',            // 'active' = visible y jugable | 'soon' = proximamente | 'hidden' = oculta
     currency: 'COP',
     price: 5000,
@@ -90,14 +91,15 @@ const USE_REMOTE = !!(RB_BIN && RB_KEY);
 const RB_URL = 'https://api.jsonbin.io/v3/b/' + RB_BIN;
 
 async function remoteLoad(){
-  if(!USE_REMOTE) return null;
+  if(!USE_REMOTE) return { ok:false, data:null, error:'desactivado' };
   try{
     const r = await fetch(RB_URL+'/latest', { headers:{ 'X-Master-Key':RB_KEY } });
-    if(!r.ok) return null;
+    if(!r.ok) return { ok:false, data:null, error:'HTTP '+r.status };
     const data = await r.json();
     const rec = (data && data.record!==undefined) ? data.record : data;
-    return (rec && (rec.raffles || rec.cfg)) ? rec : null;
-  }catch(e){ console.error('[nube] no se pudo leer:', e.message); return null; }
+    const valid = (rec && (rec.raffles || rec.cfg)) ? rec : null;
+    return { ok:true, data:valid, error:null };
+  }catch(e){ console.error('[nube] no se pudo leer:', e.message); return { ok:false, data:null, error:e.message }; }
 }
 // Version liviana para la nube: quita los comprobantes (imagenes pesadas).
 function slimForRemote(){
@@ -123,6 +125,7 @@ function normalizeRaffle(r){
   if(!r.id) r.id = uid();
   if(!r.name) r.name = 'Rifa';
   if(r.slogan==null) r.slogan = '';
+  if(!/^#[0-9a-fA-F]{6}$/.test(r.color||'')) r.color = '#FF00FF';
   if(!['active','soon','hidden'].includes(r.status)) r.status = 'active';
   if(!r.currency) r.currency = 'COP';
   if(r.price==null) r.price = 0;
@@ -218,7 +221,7 @@ function publicRaffle(r){
   for(const k in r.numbers) nums[k] = { status: r.numbers[k].status };
   const b=r.breb||{};
   return {
-    id:r.id, name:r.name, slogan:r.slogan, status:r.status, currency:r.currency, price:r.price,
+    id:r.id, name:r.name, slogan:r.slogan, color:r.color, status:r.status, currency:r.currency, price:r.price,
     drawDate:r.drawDate, drawTime:r.drawTime, drawNote:r.drawNote, whatsapp:r.whatsapp,
     prizes:(Array.isArray(r.prizes)?r.prizes:[]).filter(p=>p&&p.enabled).map(p=>({label:p.label,amount:p.amount})),
     breb: (b.enabled ? { enabled:true, llave:b.llave, beneficiary:b.beneficiary, business:b.business,
@@ -231,7 +234,7 @@ function publicRaffle(r){
 // Pagina principal: marca + lista de rifas visibles (activa / proximamente)
 app.get('/api/home', (req,res)=>{
   const list = db.raffles.filter(r=>r.status!=='hidden').map(r=>({
-    id:r.id, name:r.name, slogan:r.slogan, status:r.status, currency:r.currency, price:r.price,
+    id:r.id, name:r.name, slogan:r.slogan, color:r.color, status:r.status, currency:r.currency, price:r.price,
     drawDate:r.drawDate, drawTime:r.drawTime, drawNote:r.drawNote, whatsapp:r.whatsapp,
     prize: (Array.isArray(r.prizes)?r.prizes:[]).filter(p=>p&&p.enabled)[0]||null,
     counts: counts(r)
@@ -386,6 +389,7 @@ app.post('/api/admin/raffle/update', auth, (req,res)=>{
   const b=req.body;
   if(b.name!=null) r.name = String(b.name).slice(0,60) || r.name;
   if(b.slogan!=null) r.slogan = String(b.slogan).slice(0,120);
+  if(b.color!=null && /^#[0-9a-fA-F]{6}$/.test(b.color)) r.color = b.color;
   if(b.status && ['active','soon','hidden'].includes(b.status)) r.status = b.status;
   if(b.price!=null) r.price = Number(b.price)||0;
   if(b.currency) r.currency = String(b.currency).slice(0,6);
@@ -486,12 +490,14 @@ app.get('/', (req,res)=> res.sendFile(resolvePage('index.html')));
 app.get('/admin', (req,res)=> res.sendFile(resolvePage('admin.html')));
 
 (async ()=>{
+  let safeToSave = true;
   if(USE_REMOTE){
     const remote = await remoteLoad();
-    if(remote){ db = remote; normalizeDB(); console.log('[nube] datos cargados desde la nube (JSONBin)'); }
-    else { console.log('[nube] sin datos previos en la nube; se inicia con estado nuevo'); }
+    if(remote.ok && remote.data){ db = remote.data; normalizeDB(); console.log('[nube] datos cargados desde la nube (JSONBin)'); }
+    else if(remote.ok && !remote.data){ console.log('[nube] sin datos previos en la nube; se inicia con estado nuevo'); }
+    else { safeToSave = false; console.error('[nube] NO se pudo leer la nube ('+remote.error+'). No se guardara en este arranque para NO borrar tus datos. Reinicia el servicio cuando la nube responda.'); }
   }
-  save();
+  if(safeToSave) save();
   app.listen(PORT, '0.0.0.0', ()=>{
     console.log('DREAMS RIFA (multi-rifa) corriendo en puerto '+PORT);
     console.log(' - Cliente: '+PUBLIC_URL+'/');
