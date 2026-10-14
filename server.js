@@ -66,6 +66,9 @@ function newRaffle(name){
     drawNote: '',                // texto libre, ej: 'Sorteo semanal cada domingo'
     whatsapp: '',                // enlace del grupo de WhatsApp de esta rifa
     autoReleaseMin: 0,           // liberar numeros reservados sin pago X minutos antes del sorteo (0 = desactivado)
+    mode: 'numbers',             // 'numbers' = rifa con tablero | 'showcase' = vitrina de solo premios
+    lotteryImage: '',            // imagen de la loteria (solo para vitrina), guardada en su propia caja
+    lotteryBin: '',              // id de la caja JSONBin donde vive la imagen de la loteria
     prizes: defaultPrizes(),
     breb: defaultBreb(),
     numbers: blankNumbers(),
@@ -145,6 +148,9 @@ async function inflateImages(){
       if(r.breb && r.breb.qrBin && !isDataImage(r.breb.qrImage)){
         const img = await imgBinGet(r.breb.qrBin); if(img) r.breb.qrImage = img;
       }
+      if(r.lotteryBin && !isDataImage(r.lotteryImage)){
+        const img = await imgBinGet(r.lotteryBin); if(img) r.lotteryImage = img;
+      }
     }
     console.log('[img] imagenes recuperadas desde sus cajas');
   }catch(e){ console.error('[img] error recuperando imagenes:', e.message); }
@@ -160,6 +166,9 @@ async function migrateImages(){
   for(const r of (db.raffles||[])){
     if(r.breb && isDataImage(r.breb.qrImage) && !r.breb.qrBin){
       const id = await imgBinPut('', r.breb.qrImage); if(id){ r.breb.qrBin=id; changed=true; }
+    }
+    if(isDataImage(r.lotteryImage) && !r.lotteryBin){
+      const id = await imgBinPut('', r.lotteryImage); if(id){ r.lotteryBin=id; changed=true; }
     }
   }
   if(changed){ console.log('[img] imagenes viejas movidas a sus cajas; guardando...'); save(); }
@@ -183,6 +192,7 @@ function slimForRemote(){
   if(c.brand && isDataImage(c.brand.logo)) c.brand.logo='';   // el logo vive en su caja
   (c.raffles||[]).forEach(r=>{
     if(r.breb && isDataImage(r.breb.qrImage)) r.breb.qrImage='';  // el QR vive en su caja
+    if(isDataImage(r.lotteryImage)) r.lotteryImage='';            // la imagen de loteria vive en su caja
     if(r.numbers) for(const k in r.numbers){ if(r.numbers[k]) delete r.numbers[k].receipt; }
     if(Array.isArray(r.history)) r.history.forEach(h=>{ if(h&&h.participants) h.participants.forEach(p=>{ if(p) delete p.receipt; }); });
   });
@@ -226,6 +236,9 @@ function normalizeRaffle(r){
   if(r.drawNote==null) r.drawNote = '';
   if(r.whatsapp==null) r.whatsapp = '';
   if(r.autoReleaseMin==null || isNaN(Number(r.autoReleaseMin))) r.autoReleaseMin = 0; else r.autoReleaseMin = Number(r.autoReleaseMin);
+  if(r.mode!=='showcase') r.mode = 'numbers';
+  if(r.lotteryImage==null) r.lotteryImage = '';
+  if(r.lotteryBin==null) r.lotteryBin = '';
   if(!Array.isArray(r.prizes)) r.prizes = defaultPrizes();
   if(!r.breb) r.breb = defaultBreb();
   if(r.breb.qrBin==null) r.breb.qrBin = '';
@@ -382,6 +395,7 @@ function publicRaffle(r){
   return {
     id:r.id, name:r.name, slogan:r.slogan, color:r.color, status:r.status, currency:r.currency, price:r.price,
     drawDate:r.drawDate, drawTime:r.drawTime, drawNote:r.drawNote, whatsapp:r.whatsapp,
+    mode:(r.mode==='showcase'?'showcase':'numbers'), lotteryImage:r.lotteryImage||'',
     autoReleaseMin:Number(r.autoReleaseMin)||0, release:releaseInfo(r),
     prizes:(Array.isArray(r.prizes)?r.prizes:[]).filter(p=>p&&p.enabled).map(p=>({label:p.label,amount:p.amount})),
     breb: (b.enabled ? { enabled:true, llave:b.llave, beneficiary:b.beneficiary, business:b.business,
@@ -396,8 +410,10 @@ app.get('/api/home', (req,res)=>{
   const list = db.raffles.filter(r=>r.status!=='hidden').map(r=>({
     id:r.id, name:r.name, slogan:r.slogan, color:r.color, status:r.status, currency:r.currency, price:r.price,
     drawDate:r.drawDate, drawTime:r.drawTime, drawNote:r.drawNote, whatsapp:r.whatsapp,
+    mode:(r.mode==='showcase'?'showcase':'numbers'), lotteryImage:r.lotteryImage||'',
     autoReleaseMin:Number(r.autoReleaseMin)||0, release:releaseInfo(r),
     prize: (Array.isArray(r.prizes)?r.prizes:[]).filter(p=>p&&p.enabled)[0]||null,
+    prizes:(Array.isArray(r.prizes)?r.prizes:[]).filter(p=>p&&p.enabled).map(p=>({label:p.label,amount:p.amount})),
     counts: counts(r)
   }));
   res.json({ brand:db.brand, raffles:list });
@@ -412,6 +428,7 @@ app.get('/api/state/:rid', (req,res)=>{
 app.post('/api/reserve', async (req,res)=>{
   const r = getRaffle(req.body.raffle);
   if(!r) return res.status(404).json({error:'Rifa no encontrada'});
+  if(r.mode==='showcase') return res.status(409).json({error:'Esta publicacion es solo informativa (vitrina de premios)'});
   if(r.status!=='active') return res.status(409).json({error:'Esta rifa no esta disponible en este momento'});
   const key = pad(parseInt(req.body.number,10));
   const buyer = (req.body.buyer||'').toString().trim().slice(0,60);
@@ -528,6 +545,7 @@ app.post('/api/admin/brand', auth, async (req,res)=>{
 // Crear una rifa nueva
 app.post('/api/admin/raffle/create', auth, (req,res)=>{
   const r = newRaffle((req.body && req.body.name) || 'Nueva rifa');
+  if(req.body && req.body.mode==='showcase') r.mode='showcase';
   db.raffles.push(r); save();
   res.json({ok:true, raffle:r});
 });
@@ -564,6 +582,16 @@ app.post('/api/admin/raffle/update', auth, async (req,res)=>{
   if(b.drawNote!=null) r.drawNote = String(b.drawNote).slice(0,80);
   if(b.whatsapp!=null) r.whatsapp = String(b.whatsapp).slice(0,300);
   if(b.autoReleaseMin!=null){ let m=Number(b.autoReleaseMin); if(isNaN(m)||m<0) m=0; if(m>1440) m=1440; r.autoReleaseMin=Math.round(m); }
+  if(b.mode==='numbers' || b.mode==='showcase') r.mode = b.mode;
+  if(typeof b.lotteryImage === 'string'){
+    if(b.lotteryImage===''){ r.lotteryImage=''; r.lotteryBin=''; }
+    else if(/^https?:\/\//.test(b.lotteryImage)){ r.lotteryImage=b.lotteryImage; r.lotteryBin=''; }   // ya es un enlace
+    else if(b.lotteryImage.startsWith('data:image') && b.lotteryImage.length < 6*1024*1024){
+      r.lotteryImage = b.lotteryImage;                               // en memoria servimos el base64
+      const id = await imgBinPut(r.lotteryBin||'', b.lotteryImage);  // y lo guardamos en su propia caja
+      if(id) r.lotteryBin = id;
+    }
+  }
   if(Array.isArray(b.prizes)){
     r.prizes = b.prizes.slice(0,10).map(p=>({
       label:String((p&&p.label)||'').slice(0,60), amount:Number((p&&p.amount)||0)||0, enabled:!!(p&&p.enabled) }));
