@@ -50,7 +50,7 @@ function defaultPrizes(){
   ];
 }
 function defaultBreb(){
-  return { enabled:false, llave:'', beneficiary:'', business:'', qrImage:'', requireReceipt:false };
+  return { enabled:false, llave:'', beneficiary:'', business:'', qrImage:'', qrBin:'', requireReceipt:false };
 }
 function newRaffle(name){
   return {
@@ -76,6 +76,7 @@ function newRaffle(name){
 function defaultBrand(){
   return {
     logo: '/logo.png',
+    logoBin: '',
     heading: 'DREAMS RIFA',
     slogan: 'La suerte tambien se gana',
     intro: 'Elige la rifa en la que quieres participar',
@@ -91,49 +92,77 @@ const RB_KEY = (process.env.JSONBIN_KEY||'').trim();
 const USE_REMOTE = !!(RB_BIN && RB_KEY);
 const RB_URL = 'https://api.jsonbin.io/v3/b/' + RB_BIN;
 
-/* ===================== IMAGENES EN LA NUBE (imgbb) =====================
-   Las imagenes (logo y QR) NO caben en JSONBin (tope 100KB). En vez de eso
-   se suben a imgbb (gratis) y en los datos guardamos SOLO el enlace, que pesa
-   casi nada. Asi todo persiste y la caja de JSONBin se mantiene chiquita.
-   Requiere la variable de entorno IMGBB_KEY. */
-const IMGBB_KEY = (process.env.IMGBB_KEY||'').trim();
-const USE_IMGBB = !!IMGBB_KEY;
+/* ===================== IMAGENES EN CAJAS JSONBin PROPIAS =====================
+   imgbb bloquea las subidas desde Render ("forbidden"), asi que ya no lo usamos.
+   En vez de eso, cada imagen (logo y cada QR) se guarda en SU PROPIA caja de
+   JSONBin y en los datos principales dejamos solo el id de esa caja. Asi la caja
+   principal se mantiene chiquita (<100KB) y las imagenes persisten igual.
+   La imagen se comprime en el navegador antes de subir para que cada caja
+   tambien quepa en el tope de 100KB del plan gratis. */
+const RB_BASE = 'https://api.jsonbin.io/v3/b';
 function isDataImage(s){ return typeof s==='string' && s.startsWith('data:image'); }
-async function uploadImage(dataUri){
-  if(!USE_IMGBB) return null;
+// Guarda (o actualiza) una imagen en su propia caja. Devuelve el id de la caja.
+async function imgBinPut(binId, dataUri){
+  if(!RB_KEY) return null;
+  const body = JSON.stringify({ img: dataUri });
   try{
-    const b64 = dataUri.includes(',') ? dataUri.split(',')[1] : dataUri;
-    const body = new URLSearchParams(); body.set('image', b64);
-    const r = await fetch('https://api.imgbb.com/1/upload?key='+encodeURIComponent(IMGBB_KEY), {
-      method:'POST',
-      // imgbb (Cloudflare) bloquea peticiones que no parecen de un navegador:
-      // mandamos User-Agent y Accept de navegador para evitar el "forbidden".
-      headers:{
-        'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-        'Accept':'application/json, text/plain, */*',
-        'Accept-Language':'es-ES,es;q=0.9,en;q=0.8'
-      },
-      body
-    });
-    const j = await r.json().catch(()=>null);
-    if(r.ok && j && j.success && j.data && j.data.url){ console.log('[img] imagen subida a imgbb OK'); return j.data.url; }
-    console.error('[img] NO se pudo subir la imagen (HTTP '+r.status+'): '+((j&&j.error&&j.error.message)||''));
+    if(binId){
+      const r = await fetch(RB_BASE+'/'+binId, { method:'PUT',
+        headers:{ 'Content-Type':'application/json', 'X-Master-Key':RB_KEY }, body });
+      if(r.ok){ console.log('[img] imagen actualizada en su caja ('+binId+')'); return binId; }
+      const t=await r.text().catch(()=> '');
+      console.error('[img] no se pudo actualizar la caja (HTTP '+r.status+'): '+t.slice(0,160));
+      // si fallo (p.ej. caja borrada), intentamos crear una nueva abajo
+    }
+    const r2 = await fetch(RB_BASE, { method:'POST',
+      headers:{ 'Content-Type':'application/json', 'X-Master-Key':RB_KEY, 'X-Bin-Private':'false' }, body });
+    const j2 = await r2.json().catch(()=>null);
+    if(r2.ok && j2 && j2.metadata && j2.metadata.id){ console.log('[img] imagen guardada en caja nueva ('+j2.metadata.id+')'); return j2.metadata.id; }
+    console.error('[img] NO se pudo crear la caja de la imagen: '+((j2&&j2.message)||('HTTP '+r2.status)));
     return null;
-  }catch(e){ console.error('[img] error al subir imagen:', e.message); return null; }
+  }catch(e){ console.error('[img] error guardando imagen en su caja:', e.message); return null; }
 }
-// Migracion unica: convierte imagenes viejas (base64) ya guardadas en enlaces imgbb.
+// Lee una imagen desde su caja. Devuelve el dataURI (base64) o null.
+async function imgBinGet(binId){
+  if(!RB_KEY || !binId) return null;
+  try{
+    const r = await fetch(RB_BASE+'/'+binId+'/latest', { headers:{ 'X-Master-Key':RB_KEY } });
+    if(!r.ok) return null;
+    const data = await r.json();
+    const rec = (data && data.record!==undefined) ? data.record : data;
+    return (rec && typeof rec.img==='string') ? rec.img : null;
+  }catch(e){ console.error('[img] no se pudo leer la caja '+binId+':', e.message); return null; }
+}
+// Al arrancar: rellena en memoria las imagenes (logo/QR) desde sus cajas,
+// usando el id guardado en los datos. Se hace una sola vez.
+async function inflateImages(){
+  if(!RB_KEY) return;
+  try{
+    if(db.brand && db.brand.logoBin && !isDataImage(db.brand.logo)){
+      const img = await imgBinGet(db.brand.logoBin); if(img) db.brand.logo = img;
+    }
+    for(const r of (db.raffles||[])){
+      if(r.breb && r.breb.qrBin && !isDataImage(r.breb.qrImage)){
+        const img = await imgBinGet(r.breb.qrBin); if(img) r.breb.qrImage = img;
+      }
+    }
+    console.log('[img] imagenes recuperadas desde sus cajas');
+  }catch(e){ console.error('[img] error recuperando imagenes:', e.message); }
+}
+// Migracion unica: si hay imagenes viejas guardadas como base64 (sin caja),
+// las movemos a su propia caja y dejamos solo el id.
 async function migrateImages(){
-  if(!USE_IMGBB) return;
+  if(!RB_KEY) return;
   let changed=false;
-  if(db.brand && isDataImage(db.brand.logo)){
-    const u = await uploadImage(db.brand.logo); if(u){ db.brand.logo=u; changed=true; }
+  if(db.brand && isDataImage(db.brand.logo) && !db.brand.logoBin){
+    const id = await imgBinPut('', db.brand.logo); if(id){ db.brand.logoBin=id; changed=true; }
   }
   for(const r of (db.raffles||[])){
-    if(r.breb && isDataImage(r.breb.qrImage)){
-      const u = await uploadImage(r.breb.qrImage); if(u){ r.breb.qrImage=u; changed=true; }
+    if(r.breb && isDataImage(r.breb.qrImage) && !r.breb.qrBin){
+      const id = await imgBinPut('', r.breb.qrImage); if(id){ r.breb.qrBin=id; changed=true; }
     }
   }
-  if(changed){ console.log('[img] imagenes viejas migradas a enlaces; guardando...'); save(); }
+  if(changed){ console.log('[img] imagenes viejas movidas a sus cajas; guardando...'); save(); }
 }
 
 async function remoteLoad(){
@@ -147,10 +176,13 @@ async function remoteLoad(){
     return { ok:true, data:valid, error:null };
   }catch(e){ console.error('[nube] no se pudo leer:', e.message); return { ok:false, data:null, error:e.message }; }
 }
-// Version liviana para la nube: quita los comprobantes (imagenes pesadas).
+// Version liviana para la nube: quita las imagenes pesadas (van en sus cajas)
+// y los comprobantes. Deja solo los ids de caja (logoBin/qrBin), que pesan nada.
 function slimForRemote(){
   const c = JSON.parse(JSON.stringify(db));
+  if(c.brand && isDataImage(c.brand.logo)) c.brand.logo='';   // el logo vive en su caja
   (c.raffles||[]).forEach(r=>{
+    if(r.breb && isDataImage(r.breb.qrImage)) r.breb.qrImage='';  // el QR vive en su caja
     if(r.numbers) for(const k in r.numbers){ if(r.numbers[k]) delete r.numbers[k].receipt; }
     if(Array.isArray(r.history)) r.history.forEach(h=>{ if(h&&h.participants) h.participants.forEach(p=>{ if(p) delete p.receipt; }); });
   });
@@ -196,6 +228,7 @@ function normalizeRaffle(r){
   if(r.autoReleaseMin==null || isNaN(Number(r.autoReleaseMin))) r.autoReleaseMin = 0; else r.autoReleaseMin = Number(r.autoReleaseMin);
   if(!Array.isArray(r.prizes)) r.prizes = defaultPrizes();
   if(!r.breb) r.breb = defaultBreb();
+  if(r.breb.qrBin==null) r.breb.qrBin = '';
   if(!r.numbers) r.numbers = blankNumbers();
   if(r.winner===undefined) r.winner = null;
   if(!Array.isArray(r.history)) r.history = [];
@@ -217,6 +250,7 @@ function normalizeDB(){
   }
   if(!db.brand) db.brand = defaultBrand();
   if(db.brand.logo==null) db.brand.logo = '/logo.png';
+  if(db.brand.logoBin==null) db.brand.logoBin = '';
   if(db.brand.heading==null) db.brand.heading = 'DREAMS RIFA';
   if(db.brand.slogan==null) db.brand.slogan = '';
   if(db.brand.intro==null) db.brand.intro = 'Elige la rifa en la que quieres participar';
@@ -479,12 +513,13 @@ app.post('/api/admin/brand', auth, async (req,res)=>{
     })).filter(g=>g.name||g.url);
   }
   if(typeof b.logo === 'string'){
-    if(b.logo==='') db.brand.logo='';
-    else if(b.logo==='/logo.png') db.brand.logo='/logo.png';
-    else if(/^https?:\/\//.test(b.logo)) db.brand.logo=b.logo;   // ya es un enlace
+    if(b.logo===''){ db.brand.logo=''; db.brand.logoBin=''; }
+    else if(b.logo==='/logo.png'){ db.brand.logo='/logo.png'; db.brand.logoBin=''; }
+    else if(/^https?:\/\//.test(b.logo)){ db.brand.logo=b.logo; db.brand.logoBin=''; }   // ya es un enlace
     else if(b.logo.startsWith('data:image') && b.logo.length < 6*1024*1024){
-      const url = await uploadImage(b.logo);
-      db.brand.logo = url || b.logo;   // si no hay IMGBB_KEY o falla, guarda base64 (como antes)
+      db.brand.logo = b.logo;                                   // en memoria servimos el base64
+      const id = await imgBinPut(db.brand.logoBin||'', b.logo);  // y lo guardamos en su propia caja
+      if(id) db.brand.logoBin = id;
     }
   }
   save(); res.json({ok:true, brand:db.brand});
@@ -541,14 +576,16 @@ app.post('/api/admin/raffle/update', auth, async (req,res)=>{
       beneficiary: (b.breb.beneficiary!=null?b.breb.beneficiary:cur.beneficiary||'').toString().slice(0,80),
       business: (b.breb.business!=null?b.breb.business:cur.business||'').toString().slice(0,80),
       requireReceipt: !!b.breb.requireReceipt,
-      qrImage: cur.qrImage||''
+      qrImage: cur.qrImage||'',
+      qrBin: cur.qrBin||''
     };
     if(typeof b.breb.qrImage === 'string'){
-      if(b.breb.qrImage===''){ r.breb.qrImage=''; }
-      else if(/^https?:\/\//.test(b.breb.qrImage)){ r.breb.qrImage=b.breb.qrImage; }   // ya es un enlace
+      if(b.breb.qrImage===''){ r.breb.qrImage=''; r.breb.qrBin=''; }
+      else if(/^https?:\/\//.test(b.breb.qrImage)){ r.breb.qrImage=b.breb.qrImage; r.breb.qrBin=''; }   // ya es un enlace
       else if(b.breb.qrImage.startsWith('data:image') && b.breb.qrImage.length < 6*1024*1024){
-        const url = await uploadImage(b.breb.qrImage);
-        r.breb.qrImage = url || b.breb.qrImage;   // si no hay IMGBB_KEY o falla, guarda base64 (como antes)
+        r.breb.qrImage = b.breb.qrImage;                        // en memoria servimos el base64
+        const id = await imgBinPut(r.breb.qrBin||'', b.breb.qrImage);  // y lo guardamos en su propia caja
+        if(id) r.breb.qrBin = id;
       }
     }
   }
@@ -633,7 +670,7 @@ app.get('/admin', (req,res)=> res.sendFile(resolvePage('admin.html')));
     else if(remote.ok && !remote.data){ console.log('[nube] sin datos previos en la nube; se inicia con estado nuevo'); }
     else { safeToSave = false; console.error('[nube] NO se pudo leer la nube ('+remote.error+'). No se guardara en este arranque para NO borrar tus datos. Reinicia el servicio cuando la nube responda.'); }
   }
-  if(safeToSave){ await migrateImages(); save(); }
+  if(safeToSave){ await inflateImages(); await migrateImages(); save(); }
   app.listen(PORT, '0.0.0.0', ()=>{
     console.log('DREAMS RIFA (multi-rifa) corriendo en puerto '+PORT);
     console.log(' - Cliente: '+PUBLIC_URL+'/');
@@ -641,7 +678,7 @@ app.get('/admin', (req,res)=> res.sendFile(resolvePage('admin.html')));
     console.log(' - Rifas activas: '+db.raffles.length);
     console.log(' - Mercado Pago: '+(MP_TOKEN?'ACTIVO':'NO configurado (solo pago manual/Bre-B)'));
     console.log(' - Guardado en la nube (JSONBin): '+(USE_REMOTE?'ACTIVO':'desactivado'));
-    console.log(' - Imagenes en la nube (imgbb): '+(USE_IMGBB?'ACTIVO':'NO configurado -> agrega la variable IMGBB_KEY'));
+    console.log(' - Imagenes: cada una en su propia caja de JSONBin '+(RB_KEY?'(ACTIVO)':'(desactivado: falta JSONBIN_KEY)'));
   });
   autoReleaseTick();                       // revisa al arrancar
   setInterval(autoReleaseTick, 60*1000);   // y luego cada minuto
