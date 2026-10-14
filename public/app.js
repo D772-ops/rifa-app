@@ -3,6 +3,8 @@ let HOME=null, S=null, RID=null, sel=null, payMode='manual';
 const $=id=>document.getElementById(id);
 function pad(n){return String(n).padStart(2,'0');}
 function money(c,n){return (c||'')+' '+Number(n||0).toLocaleString('es-CO');}
+function hexA(hex,a){ const h=(hex||'#FF00FF').replace('#',''); const full=h.length===3?h.split('').map(c=>c+c).join(''):h; const n=parseInt(full,16); return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')'; }
+function applyRaffleTheme(col){ const r=document.documentElement.style; const c=/^#[0-9a-fA-F]{6}$/.test(col||'')?col:'#FF00FF'; r.setProperty('--pri',c); r.setProperty('--pri2',c); r.setProperty('--win',c); }
 function esc(s){return (s==null?'':String(s)).replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]));}
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3000);}
 function closeModal(){$('modal').classList.remove('show');$('mbg').classList.remove('show');}
@@ -34,6 +36,10 @@ function renderCards(){
     const soon = r.status==='soon';
     const card=document.createElement(soon?'div':'button');
     card.className='rcard'+(soon?' soon':'');
+    const col=/^#[0-9a-fA-F]{6}$/.test(r.color||'')?r.color:'#FF00FF';
+    card.style.borderColor=col;
+    card.style.boxShadow='0 0 16px '+hexA(col,0.22);
+    card.style.background='linear-gradient(135deg,'+hexA(col,0.12)+','+hexA(col,0.04)+')';
     if(!soon) card.onclick=()=>openRaffle(r.id);
     const badge = soon ? '<span class="rbadge soon">⏰ Próximamente</span>' : '<span class="rbadge on">● Abierta</span>';
     const slo = r.slogan ? '<div class="rslo">'+esc(r.slogan)+'</div>' : '';
@@ -46,6 +52,8 @@ function renderCards(){
       '</div>';
     const go = soon ? '' : '<span class="rgo">Participar →</span>';
     card.innerHTML='<div class="rtop"><span class="rname">'+esc(r.name)+'</span>'+badge+'</div>'+slo+prize+chips+'<div class="rmeta">'+r.counts.libre+' libres • '+r.counts.res+' reservados • '+r.counts.pag+' pagados</div>'+go;
+    const _nm=card.querySelector('.rname'); if(_nm) _nm.style.color=col;
+    const _go=card.querySelector('.rgo'); if(_go) _go.style.color=col;
     box.appendChild(card);
   });
 }
@@ -58,13 +66,14 @@ function renderGroups(){
   html+='</div>';
   wrap.innerHTML=html;
 }
-function goHome(){ RID=null; history.replaceState({},'','/'); $('board-view').classList.add('hidden'); $('home').classList.remove('hidden'); loadHome(); }
+function goHome(){ RID=null; applyRaffleTheme(null); history.replaceState({},'','/'); $('board-view').classList.add('hidden'); $('home').classList.remove('hidden'); loadHome(); }
 function openRaffle(id){ RID=id; history.replaceState({},'','/?r='+id); $('home').classList.add('hidden'); $('board-view').classList.remove('hidden'); loadBoard(); }
 /* ===================== TABLERO DE UNA RIFA ===================== */
 async function loadBoard(){
   try{ S = await (await fetch('/api/state/'+RID)).json(); }catch(e){ toast('Sin conexión'); return; }
   if(S.error){ toast('Esta rifa ya no existe'); goHome(); return; }
   document.title=(S.name||'DREAMS RIFA');
+  applyRaffleTheme(S.color);
   renderPrizes();
   const wa=$('waBtn');
   if(S.whatsapp){ wa.href=S.whatsapp; wa.classList.remove('hidden'); $('waBtnLabel').textContent='Unirme al grupo de «'+(S.name||'la rifa')+'»'; }
@@ -177,7 +186,9 @@ function shareImage(){
   if(!S){ toast('Espera, cargando...'); return; }
   const W=1080, pad0=48, cols=10, gap=12;
   const gridW=W-pad0*2, cell=(gridW-gap*(cols-1))/cols;
-  const topH=360, legendH=150, gridH=cell*10+gap*9;
+  const ps=(S.prizes||[]).slice(0,3);
+  const nSec=Math.max(0,ps.length-1), SEC=48;
+  const topH=360+nSec*SEC, legendH=150, gridH=cell*10+gap*9;
   const H=topH+gridH+legendH;
   const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
   const x=cv.getContext('2d');
@@ -188,13 +199,18 @@ function shareImage(){
   x.fillStyle=lg; x.shadowColor='rgba(255,0,255,.6)'; x.shadowBlur=24;
   x.fillText((S.name||'DREAMS RIFA').toUpperCase(),W/2,120); x.shadowBlur=0;
   if(S.slogan){ x.font='italic 34px Segoe UI,Arial,sans-serif'; x.fillStyle='#FFD700'; x.fillText(S.slogan,W/2,170); }
-  const ps=(S.prizes||[]);
   if(ps[0]){ x.font='800 44px Segoe UI,Arial,sans-serif'; x.fillStyle='#FFE766'; x.shadowColor='rgba(255,215,0,.5)'; x.shadowBlur=16;
     x.fillText('\u{1F3C6} '+money(S.currency,ps[0].amount),W/2,236); x.shadowBlur=0;
     x.font='28px Segoe UI,Arial,sans-serif'; x.fillStyle='#c89bd6'; x.fillText(ps[0].label,W/2,276); }
+  let sy=316;
+  for(let i=1;i<ps.length;i++){
+    x.font='700 30px Segoe UI,Arial,sans-serif'; x.fillStyle='#FFE766'; x.shadowColor='rgba(255,215,0,.35)'; x.shadowBlur=10;
+    x.fillText('\u2728 '+ps[i].label+': '+money(S.currency,ps[i].amount),W/2,sy); x.shadowBlur=0;
+    sy+=SEC;
+  }
   x.font='26px Segoe UI,Arial,sans-serif'; x.fillStyle='#f7eaff';
-  x.fillText('Valor por numero: '+money(S.currency,S.price)+'  \u2022  Sorteo '+(S.drawTime||''),W/2,318);
-  x.fillText(fechaLarga(S.drawDate),W/2,350);
+  x.fillText('Valor por numero: '+money(S.currency,S.price)+'  \u2022  Sorteo '+(S.drawTime||''),W/2,318+nSec*SEC);
+  x.fillText(fechaLarga(S.drawDate),W/2,350+nSec*SEC);
   const gy=topH;
   for(let i=0;i<100;i++){
     const k=pad(i), s=S.numbers[k].status, win=(S.winner===k);

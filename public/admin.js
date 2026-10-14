@@ -1,6 +1,8 @@
 /* DREAMS RIFA - panel de administracion (multi-rifa) */
 let PASS = sessionStorage.getItem('rifa_admin_pass')||'';
 let DB=null, CUR=null;
+const NEON_COLORS=[['Fucsia','#FF00FF'],['Amarillo','#FFE600'],['Azul','#00E5FF'],['Rojo','#FF1744'],['Verde','#39FF14'],['Naranja','#FF6D00'],['Morado','#B026FF'],['Rosa','#FF4FD8']];
+let _color='#FF00FF';
 const $=id=>document.getElementById(id);
 function pad(n){return String(n).padStart(2,'0');}
 function esc(s){return (s==null?'':String(s)).replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]));}
@@ -55,7 +57,9 @@ function renderShell(){
 function renderTabs(){
   let h='';
   (DB.raffles||[]).forEach(r=>{
-    h+='<div class="rtab'+(r.id===CUR?' on':'')+'" onclick="selectRaffle(\''+r.id+'\')">'+
+    const _c = /^#[0-9a-fA-F]{6}$/.test(r.color||'') ? r.color : '#FF00FF';
+    h+='<div class="rtab'+(r.id===CUR?' on':'')+'" onclick="selectRaffle(\''+r.id+'\')" '+
+       'style="border-left:4px solid '+_c+(r.id===CUR?';box-shadow:0 0 12px '+_c:'')+'">'+
        '<span class="dot '+r.status+'"></span>'+esc(r.name)+'</div>';
   });
   h+='<div class="rtab add" onclick="createRaffle()">+ Crear rifa</div>';
@@ -183,6 +187,7 @@ async function clearWinner(){ await api('/api/admin/clear-winner',{raffle:CUR});
 let _qr='';
 function openConfig(){
   const r=cur(); _qr = (r.breb&&r.breb.qrImage)||'';
+  _color = /^#[0-9a-fA-F]{6}$/.test(r.color||'') ? r.color : '#FF00FF';
   const b=r.breb||{};
   const pr=r.prizes||[];
   function pz(i){ const p=pr[i]||{label:'',amount:0,enabled:false};
@@ -194,6 +199,7 @@ function openConfig(){
   const h='<h2>⚙️ Configurar rifa</h2>'+
     '<div class="field"><label>Nombre de la rifa</label><input id="cName" value="'+esc(r.name)+'"></div>'+
     '<div class="field"><label>Frase / eslogan</label><input id="cSlogan" value="'+esc(r.slogan||'')+'"></div>'+
+    '<div class="field"><label>Color neón de la rifa</label><div id="colorBox"></div></div>'+
     '<div class="field"><label>Estado</label><select id="cStatus">'+
       '<option value="active"'+(r.status==='active'?' selected':'')+'>Activa (visible y jugando)</option>'+
       '<option value="soon"'+(r.status==='soon'?' selected':'')+'>Próximamente (se muestra pero no se juega)</option>'+
@@ -215,13 +221,23 @@ function openConfig(){
       '<div id="qrBox">'+(_qr?'<img class="qr-prev" src="'+_qr+'"><br><button class="btn sm danger" onclick="qrDel()">Quitar QR</button>':'<button class="btn sm" onclick="$(\'qrFile\').click()">Subir imagen QR</button>')+'</div>'+
       '<input id="qrFile" type="file" accept="image/*" style="display:none" onchange="qrPick(event)"></div>'+
     '<div class="btns"><button class="btn primary" onclick="saveConfig()">Guardar cambios</button></div>';
-  openModal(h);
+  openModal(h); renderColorBox();
 }
+function renderColorBox(){
+  const box=$('colorBox'); if(!box) return;
+  box.innerHTML=NEON_COLORS.map(([nm,hex])=>
+    '<button type="button" title="'+nm+'" onclick="pickColor(\''+hex+'\')" '+
+    'style="width:34px;height:34px;border-radius:50%;margin:4px;cursor:pointer;'+
+    'background:'+hex+';box-shadow:0 0 10px '+hex+';'+
+    'border:'+(_color.toLowerCase()===hex.toLowerCase()?'3px solid #fff':'2px solid rgba(255,255,255,.25)')+'"></button>'
+  ).join('');
+}
+function pickColor(hex){ _color=hex; renderColorBox(); }
 function qrPick(ev){ const f=ev.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{ _qr=rd.result; const box=$('qrBox'); if(box) box.innerHTML='<img class="qr-prev" src="'+_qr+'"><br><button class="btn sm danger" onclick="qrDel()">Quitar QR</button>'; }; rd.readAsDataURL(f); }
 function qrDel(){ _qr=''; const box=$('qrBox'); if(box) box.innerHTML='<button class="btn sm" onclick="$(\'qrFile\').click()">Subir imagen QR</button>'; }
 async function saveConfig(){
   const prizes=[0,1,2,3].map(i=>({label:$('pzLb'+i).value.trim(),amount:Number($('pzAm'+i).value)||0,enabled:$('pzEn'+i).checked}));
-  const body={ raffle:CUR, name:$('cName').value.trim(), slogan:$('cSlogan').value.trim(), status:$('cStatus').value,
+  const body={ raffle:CUR, name:$('cName').value.trim(), slogan:$('cSlogan').value.trim(), color:_color, status:$('cStatus').value,
     price:Number($('cPrice').value)||0, currency:$('cCurrency').value.trim()||'COP',
     drawDate:$('cDate').value, drawTime:$('cTime').value, drawNote:$('cNote').value.trim(), whatsapp:$('cWhats').value.trim(),
     prizes,
@@ -316,7 +332,9 @@ function shareImage(){
   const r=cur(); if(!r){ return; }
   const W=1080,P=48,cols=10,gap=12;
   const gridW=W-P*2, cell=(gridW-gap*(cols-1))/cols;
-  const topH=360, legendH=120, gridH=cell*10+gap*9, H=topH+gridH+legendH;
+  const ps=(r.prizes||[]).filter(p=>p&&p.enabled).slice(0,3);
+  const nSec=Math.max(0,ps.length-1), SEC=48;
+  const topH=360+nSec*SEC, legendH=120, gridH=cell*10+gap*9, H=topH+gridH+legendH;
   const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
   const x=cv.getContext('2d');
   const bg=x.createLinearGradient(0,0,W,H); bg.addColorStop(0,'#1a0020'); bg.addColorStop(.5,'#0A000A'); bg.addColorStop(1,'#20002a');
@@ -326,13 +344,18 @@ function shareImage(){
   x.fillStyle=lg; x.shadowColor='rgba(255,0,255,.6)'; x.shadowBlur=24;
   x.fillText((r.name||'DREAMS RIFA').toUpperCase(),W/2,120); x.shadowBlur=0;
   if(r.slogan){ x.font='italic 34px Segoe UI,Arial,sans-serif'; x.fillStyle='#FFD700'; x.fillText(r.slogan,W/2,170); }
-  const ps=(r.prizes||[]).filter(p=>p&&p.enabled);
   if(ps[0]){ x.font='800 44px Segoe UI,Arial,sans-serif'; x.fillStyle='#FFE766'; x.shadowColor='rgba(255,215,0,.5)'; x.shadowBlur=16;
     x.fillText('🏆 '+money(ps[0].amount),W/2,236); x.shadowBlur=0;
     x.font='28px Segoe UI,Arial,sans-serif'; x.fillStyle='#c89bd6'; x.fillText(ps[0].label,W/2,276); }
+  let sy=316;
+  for(let i=1;i<ps.length;i++){
+    x.font='700 30px Segoe UI,Arial,sans-serif'; x.fillStyle='#FFE766'; x.shadowColor='rgba(255,215,0,.35)'; x.shadowBlur=10;
+    x.fillText('✨ '+ps[i].label+': '+money(ps[i].amount),W/2,sy); x.shadowBlur=0;
+    sy+=SEC;
+  }
   x.font='26px Segoe UI,Arial,sans-serif'; x.fillStyle='#f7eaff';
-  x.fillText('Valor por numero: '+money(r.price)+'  •  Sorteo '+(r.drawTime||''),W/2,318);
-  x.fillText(fechaLarga(r.drawDate),W/2,350);
+  x.fillText('Valor por numero: '+money(r.price)+'  •  Sorteo '+(r.drawTime||''),W/2,318+nSec*SEC);
+  x.fillText(fechaLarga(r.drawDate),W/2,350+nSec*SEC);
   const gy=topH;
   for(let i=0;i<100;i++){ const k=pad(i),n=r.numbers[k]||{status:'available'};
     const col=i%10, row=Math.floor(i/10);
