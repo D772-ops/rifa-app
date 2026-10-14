@@ -65,6 +65,7 @@ function newRaffle(name){
     drawTime: '20:00',
     drawNote: '',                // texto libre, ej: 'Sorteo semanal cada domingo'
     whatsapp: '',                // enlace del grupo de WhatsApp de esta rifa
+    autoReleaseMin: 0,           // liberar numeros reservados sin pago X minutos antes del sorteo (0 = desactivado)
     prizes: defaultPrizes(),
     breb: defaultBreb(),
     numbers: blankNumbers(),
@@ -182,6 +183,7 @@ function normalizeRaffle(r){
   if(!r.drawTime) r.drawTime = '20:00';
   if(r.drawNote==null) r.drawNote = '';
   if(r.whatsapp==null) r.whatsapp = '';
+  if(r.autoReleaseMin==null || isNaN(Number(r.autoReleaseMin))) r.autoReleaseMin = 0; else r.autoReleaseMin = Number(r.autoReleaseMin);
   if(!Array.isArray(r.prizes)) r.prizes = defaultPrizes();
   if(!r.breb) r.breb = defaultBreb();
   if(!r.numbers) r.numbers = blankNumbers();
@@ -237,6 +239,39 @@ function onShutdown(sig){
 }
 process.on('SIGTERM', ()=>onShutdown('SIGTERM'));
 process.on('SIGINT',  ()=>onShutdown('SIGINT'));
+
+/* ===================== LIBERACION AUTOMATICA DE NUMEROS =====================
+   Si no puedes estar atenta a la hora del sorteo, la pagina libera sola los
+   numeros que estan RESERVADOS pero SIN pago (sin comprobante y sin pago
+   pendiente de aprobacion), X minutos antes del sorteo de cada rifa.
+   NO toca los que estan pagados ni los que estan esperando aprobacion. */
+const TZ_OFFSET = (process.env.TZ_OFFSET||'-05:00').trim();   // hora de Colombia por defecto
+function drawTimestamp(r){
+  if(!r || !r.drawDate) return null;
+  const hhmm = (typeof r.drawTime==='string' && /^\d{2}:\d{2}$/.test(r.drawTime)) ? r.drawTime : '20:00';
+  const t = Date.parse(r.drawDate+'T'+hhmm+':00'+TZ_OFFSET);
+  return isNaN(t) ? null : t;
+}
+// Un numero se libera solo si: esta reservado, NO tiene pago pendiente (Mercado
+// Pago), NO fue reclamado y NO tiene comprobante cargado.
+function esReservadoSinPago(n){
+  return n && n.status==='reserved' && !n.mpPending && !n.claimed && !n.receipt;
+}
+function autoReleaseTick(){
+  const now = Date.now();
+  let changed = false, total = 0;
+  for(const r of (db.raffles||[])){
+    const mins = Number(r.autoReleaseMin)||0;
+    if(mins<=0) continue;                 // desactivado para esta rifa
+    const draw = drawTimestamp(r);
+    if(draw==null) continue;
+    if(now < draw - mins*60000) continue; // todavia no entra en la ventana de liberacion
+    for(const k in r.numbers){
+      if(esReservadoSinPago(r.numbers[k])){ r.numbers[k] = { status:'available' }; changed=true; total++; }
+    }
+  }
+  if(changed){ console.log('[auto] se liberaron '+total+' numero(s) reservado(s) sin pago antes del sorteo'); save(); }
+}
 function getRaffle(id){ return db.raffles.find(r=>r.id===id) || null; }
 /* ---------- Mercado Pago (opcional, token global) ---------- */
 async function mpCreatePreference(r, numKey, buyer){
@@ -464,6 +499,7 @@ app.post('/api/admin/raffle/update', auth, async (req,res)=>{
   if(b.drawTime!=null) r.drawTime = String(b.drawTime).slice(0,5);
   if(b.drawNote!=null) r.drawNote = String(b.drawNote).slice(0,80);
   if(b.whatsapp!=null) r.whatsapp = String(b.whatsapp).slice(0,300);
+  if(b.autoReleaseMin!=null){ let m=Number(b.autoReleaseMin); if(isNaN(m)||m<0) m=0; if(m>1440) m=1440; r.autoReleaseMin=Math.round(m); }
   if(Array.isArray(b.prizes)){
     r.prizes = b.prizes.slice(0,10).map(p=>({
       label:String((p&&p.label)||'').slice(0,60), amount:Number((p&&p.amount)||0)||0, enabled:!!(p&&p.enabled) }));
@@ -578,5 +614,7 @@ app.get('/admin', (req,res)=> res.sendFile(resolvePage('admin.html')));
     console.log(' - Guardado en la nube (JSONBin): '+(USE_REMOTE?'ACTIVO':'desactivado'));
     console.log(' - Imagenes en la nube (imgbb): '+(USE_IMGBB?'ACTIVO':'NO configurado -> agrega la variable IMGBB_KEY'));
   });
+  autoReleaseTick();                       // revisa al arrancar
+  setInterval(autoReleaseTick, 60*1000);   // y luego cada minuto
 })();
 
