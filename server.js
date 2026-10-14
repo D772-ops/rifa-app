@@ -90,6 +90,41 @@ const RB_KEY = (process.env.JSONBIN_KEY||'').trim();
 const USE_REMOTE = !!(RB_BIN && RB_KEY);
 const RB_URL = 'https://api.jsonbin.io/v3/b/' + RB_BIN;
 
+/* ===================== IMAGENES EN LA NUBE (imgbb) =====================
+   Las imagenes (logo y QR) NO caben en JSONBin (tope 100KB). En vez de eso
+   se suben a imgbb (gratis) y en los datos guardamos SOLO el enlace, que pesa
+   casi nada. Asi todo persiste y la caja de JSONBin se mantiene chiquita.
+   Requiere la variable de entorno IMGBB_KEY. */
+const IMGBB_KEY = (process.env.IMGBB_KEY||'').trim();
+const USE_IMGBB = !!IMGBB_KEY;
+function isDataImage(s){ return typeof s==='string' && s.startsWith('data:image'); }
+async function uploadImage(dataUri){
+  if(!USE_IMGBB) return null;
+  try{
+    const b64 = dataUri.includes(',') ? dataUri.split(',')[1] : dataUri;
+    const body = new URLSearchParams(); body.set('image', b64);
+    const r = await fetch('https://api.imgbb.com/1/upload?key='+encodeURIComponent(IMGBB_KEY), { method:'POST', body });
+    const j = await r.json().catch(()=>null);
+    if(r.ok && j && j.success && j.data && j.data.url){ console.log('[img] imagen subida a imgbb OK'); return j.data.url; }
+    console.error('[img] NO se pudo subir la imagen (HTTP '+r.status+'): '+((j&&j.error&&j.error.message)||''));
+    return null;
+  }catch(e){ console.error('[img] error al subir imagen:', e.message); return null; }
+}
+// Migracion unica: convierte imagenes viejas (base64) ya guardadas en enlaces imgbb.
+async function migrateImages(){
+  if(!USE_IMGBB) return;
+  let changed=false;
+  if(db.brand && isDataImage(db.brand.logo)){
+    const u = await uploadImage(db.brand.logo); if(u){ db.brand.logo=u; changed=true; }
+  }
+  for(const r of (db.raffles||[])){
+    if(r.breb && isDataImage(r.breb.qrImage)){
+      const u = await uploadImage(r.breb.qrImage); if(u){ r.breb.qrImage=u; changed=true; }
+    }
+  }
+  if(changed){ console.log('[img] imagenes viejas migradas a enlaces; guardando...'); save(); }
+}
+
 async function remoteLoad(){
   if(!USE_REMOTE) return { ok:false, data:null, error:'desactivado' };
   try{
@@ -368,7 +403,7 @@ app.get('/api/admin/state', auth, (req,res)=>{
 });
 
 // Guardar la marca / pagina principal (logo, titulo, intro, grupos WhatsApp)
-app.post('/api/admin/brand', auth, (req,res)=>{
+app.post('/api/admin/brand', auth, async (req,res)=>{
   const b=req.body||{};
   if(b.heading!=null) db.brand.heading = String(b.heading).slice(0,60);
   if(b.slogan!=null) db.brand.slogan = String(b.slogan).slice(0,120);
@@ -382,7 +417,11 @@ app.post('/api/admin/brand', auth, (req,res)=>{
   if(typeof b.logo === 'string'){
     if(b.logo==='') db.brand.logo='';
     else if(b.logo==='/logo.png') db.brand.logo='/logo.png';
-    else if(b.logo.startsWith('data:image') && b.logo.length < 6*1024*1024) db.brand.logo=b.logo;
+    else if(/^https?:\/\//.test(b.logo)) db.brand.logo=b.logo;   // ya es un enlace
+    else if(b.logo.startsWith('data:image') && b.logo.length < 6*1024*1024){
+      const url = await uploadImage(b.logo);
+      db.brand.logo = url || b.logo;   // si no hay IMGBB_KEY o falla, guarda base64 (como antes)
+    }
   }
   save(); res.json({ok:true, brand:db.brand});
 });
@@ -411,7 +450,7 @@ app.post('/api/admin/raffle/move', auth, (req,res)=>{
   res.json({ok:true});
 });
 // Editar la configuracion de una rifa
-app.post('/api/admin/raffle/update', auth, (req,res)=>{
+app.post('/api/admin/raffle/update', auth, async (req,res)=>{
   const r = getRaffle(req.body.raffle);
   if(!r) return res.status(404).json({error:'Rifa no encontrada'});
   const b=req.body;
@@ -441,7 +480,11 @@ app.post('/api/admin/raffle/update', auth, (req,res)=>{
     };
     if(typeof b.breb.qrImage === 'string'){
       if(b.breb.qrImage===''){ r.breb.qrImage=''; }
-      else if(b.breb.qrImage.startsWith('data:image') && b.breb.qrImage.length < 6*1024*1024){ r.breb.qrImage=b.breb.qrImage; }
+      else if(/^https?:\/\//.test(b.breb.qrImage)){ r.breb.qrImage=b.breb.qrImage; }   // ya es un enlace
+      else if(b.breb.qrImage.startsWith('data:image') && b.breb.qrImage.length < 6*1024*1024){
+        const url = await uploadImage(b.breb.qrImage);
+        r.breb.qrImage = url || b.breb.qrImage;   // si no hay IMGBB_KEY o falla, guarda base64 (como antes)
+      }
     }
   }
   save(); res.json({ok:true, raffle:r});
@@ -525,7 +568,7 @@ app.get('/admin', (req,res)=> res.sendFile(resolvePage('admin.html')));
     else if(remote.ok && !remote.data){ console.log('[nube] sin datos previos en la nube; se inicia con estado nuevo'); }
     else { safeToSave = false; console.error('[nube] NO se pudo leer la nube ('+remote.error+'). No se guardara en este arranque para NO borrar tus datos. Reinicia el servicio cuando la nube responda.'); }
   }
-  if(safeToSave) save();
+  if(safeToSave){ await migrateImages(); save(); }
   app.listen(PORT, '0.0.0.0', ()=>{
     console.log('DREAMS RIFA (multi-rifa) corriendo en puerto '+PORT);
     console.log(' - Cliente: '+PUBLIC_URL+'/');
@@ -533,6 +576,7 @@ app.get('/admin', (req,res)=> res.sendFile(resolvePage('admin.html')));
     console.log(' - Rifas activas: '+db.raffles.length);
     console.log(' - Mercado Pago: '+(MP_TOKEN?'ACTIVO':'NO configurado (solo pago manual/Bre-B)'));
     console.log(' - Guardado en la nube (JSONBin): '+(USE_REMOTE?'ACTIVO':'desactivado'));
+    console.log(' - Imagenes en la nube (imgbb): '+(USE_IMGBB?'ACTIVO':'NO configurado -> agrega la variable IMGBB_KEY'));
   });
 })();
 
