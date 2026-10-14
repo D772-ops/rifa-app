@@ -186,7 +186,7 @@ function shareImage(){
   if(!S){ toast('Espera, cargando...'); return; }
   const W=1080, pad0=48, cols=10, gap=12;
   const gridW=W-pad0*2, cell=(gridW-gap*(cols-1))/cols;
-  const ps=(S.prizes||[]).slice(0,3);
+  const ps=(S.prizes||[]);
   const nSec=Math.max(0,ps.length-1), SEC=48;
   const topH=360+nSec*SEC, legendH=150, gridH=cell*10+gap*9;
   const H=topH+gridH+legendH;

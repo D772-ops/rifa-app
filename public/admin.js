@@ -3,6 +3,7 @@ let PASS = sessionStorage.getItem('rifa_admin_pass')||'';
 let DB=null, CUR=null;
 const NEON_COLORS=[['Fucsia','#FF00FF'],['Amarillo','#FFE600'],['Azul','#00E5FF'],['Rojo','#FF1744'],['Verde','#39FF14'],['Naranja','#FF6D00'],['Morado','#B026FF'],['Rosa','#FF4FD8']];
 let _color='#FF00FF';
+let _prizes=[];
 const $=id=>document.getElementById(id);
 function pad(n){return String(n).padStart(2,'0');}
 function esc(s){return (s==null?'':String(s)).replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]));}
@@ -189,13 +190,8 @@ function openConfig(){
   const r=cur(); _qr = (r.breb&&r.breb.qrImage)||'';
   _color = /^#[0-9a-fA-F]{6}$/.test(r.color||'') ? r.color : '#FF00FF';
   const b=r.breb||{};
-  const pr=r.prizes||[];
-  function pz(i){ const p=pr[i]||{label:'',amount:0,enabled:false};
-    return '<div class="row" style="margin-bottom:8px">'+
-      '<div style="flex:0 0 34px;display:flex;align-items:center"><input type="checkbox" id="pzEn'+i+'" '+(p.enabled?'checked':'')+' style="width:auto"></div>'+
-      '<input id="pzLb'+i+'" placeholder="Premio '+(i+1)+'" value="'+esc(p.label)+'">'+
-      '<input id="pzAm'+i+'" type="number" placeholder="Monto" value="'+(p.amount||0)+'" style="flex:0 0 120px">'+
-    '</div>'; }
+  _prizes = (r.prizes||[]).map(p=>({label:p.label||'',amount:p.amount||0,enabled:!!p.enabled}));
+  if(!_prizes.length) _prizes.push({label:'',amount:0,enabled:true});
   const h='<h2>⚙️ Configurar rifa</h2>'+
     '<div class="field"><label>Nombre de la rifa</label><input id="cName" value="'+esc(r.name)+'"></div>'+
     '<div class="field"><label>Frase / eslogan</label><input id="cSlogan" value="'+esc(r.slogan||'')+'"></div>'+
@@ -210,7 +206,9 @@ function openConfig(){
       '<div class="field"><label>Hora del sorteo</label><input id="cTime" type="time" value="'+esc(r.drawTime||'')+'"></div></div>'+
     '<div class="field"><label>Nota del sorteo (libre)</label><input id="cNote" value="'+esc(r.drawNote||'')+'" placeholder="Ej: Sorteo cada domingo con la lotería"></div>'+
     '<div class="field"><label>Enlace del grupo de WhatsApp de esta rifa</label><input id="cWhats" value="'+esc(r.whatsapp||'')+'" placeholder="https://chat.whatsapp.com/..."></div>'+
-    '<div class="field"><label>Premios</label>'+pz(0)+pz(1)+pz(2)+pz(3)+'<div class="hint">Marca la casilla para que un premio se muestre.</div></div>'+
+    '<div class="field"><label>Premios (hasta 10)</label><div id="prizeBox"></div>'+
+      '<button type="button" class="btn sm" style="margin-top:8px" onclick="prizeAdd()">+ Agregar premio</button>'+
+      '<div class="hint">Marca la casilla de cada premio que quieras mostrar en la página y en la imagen.</div></div>'+
     '<hr style="border:none;border-top:1px solid var(--line);margin:14px 0">'+
     '<div class="field"><label class="grow"><input type="checkbox" id="bEn" '+(b.enabled?'checked':'')+' style="width:auto"> Aceptar pagos por Bre-B / transferencia en esta rifa</label></div>'+
     '<div class="field"><label>Llave Bre-B</label><input id="bKey" value="'+esc(b.llave||'')+'" placeholder="@tullave o número"></div>'+
@@ -221,8 +219,21 @@ function openConfig(){
       '<div id="qrBox">'+(_qr?'<img class="qr-prev" src="'+_qr+'"><br><button class="btn sm danger" onclick="qrDel()">Quitar QR</button>':'<button class="btn sm" onclick="$(\'qrFile\').click()">Subir imagen QR</button>')+'</div>'+
       '<input id="qrFile" type="file" accept="image/*" style="display:none" onchange="qrPick(event)"></div>'+
     '<div class="btns"><button class="btn primary" onclick="saveConfig()">Guardar cambios</button></div>';
-  openModal(h); renderColorBox();
+  openModal(h); renderColorBox(); renderPrizeBox();
 }
+function renderPrizeBox(){
+  const box=$('prizeBox'); if(!box) return;
+  box.innerHTML=_prizes.map((p,i)=>
+    '<div class="row" style="margin-bottom:8px">'+
+      '<div style="flex:0 0 30px;display:flex;align-items:center"><input type="checkbox" '+(p.enabled?'checked':'')+' style="width:auto" onchange="_prizes['+i+'].enabled=this.checked"></div>'+
+      '<input placeholder="Premio '+(i+1)+'" value="'+esc(p.label)+'" oninput="_prizes['+i+'].label=this.value">'+
+      '<input type="number" placeholder="Monto" value="'+(p.amount||0)+'" style="flex:0 0 110px" oninput="_prizes['+i+'].amount=Number(this.value)||0">'+
+      '<button type="button" class="btn sm danger" style="flex:0 0 auto" onclick="prizeDel('+i+')">✕</button>'+
+    '</div>'
+  ).join('');
+}
+function prizeAdd(){ if(_prizes.length>=10){ toast('Máximo 10 premios'); return; } _prizes.push({label:'',amount:0,enabled:true}); renderPrizeBox(); }
+function prizeDel(i){ _prizes.splice(i,1); if(!_prizes.length) _prizes.push({label:'',amount:0,enabled:true}); renderPrizeBox(); }
 function renderColorBox(){
   const box=$('colorBox'); if(!box) return;
   box.innerHTML=NEON_COLORS.map(([nm,hex])=>
@@ -236,7 +247,7 @@ function pickColor(hex){ _color=hex; renderColorBox(); }
 function qrPick(ev){ const f=ev.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{ _qr=rd.result; const box=$('qrBox'); if(box) box.innerHTML='<img class="qr-prev" src="'+_qr+'"><br><button class="btn sm danger" onclick="qrDel()">Quitar QR</button>'; }; rd.readAsDataURL(f); }
 function qrDel(){ _qr=''; const box=$('qrBox'); if(box) box.innerHTML='<button class="btn sm" onclick="$(\'qrFile\').click()">Subir imagen QR</button>'; }
 async function saveConfig(){
-  const prizes=[0,1,2,3].map(i=>({label:$('pzLb'+i).value.trim(),amount:Number($('pzAm'+i).value)||0,enabled:$('pzEn'+i).checked}));
+  const prizes=_prizes.map(p=>({label:(p.label||'').trim(),amount:Number(p.amount)||0,enabled:!!p.enabled}));
   const body={ raffle:CUR, name:$('cName').value.trim(), slogan:$('cSlogan').value.trim(), color:_color, status:$('cStatus').value,
     price:Number($('cPrice').value)||0, currency:$('cCurrency').value.trim()||'COP',
     drawDate:$('cDate').value, drawTime:$('cTime').value, drawNote:$('cNote').value.trim(), whatsapp:$('cWhats').value.trim(),
@@ -332,7 +343,7 @@ function shareImage(){
   const r=cur(); if(!r){ return; }
   const W=1080,P=48,cols=10,gap=12;
   const gridW=W-P*2, cell=(gridW-gap*(cols-1))/cols;
-  const ps=(r.prizes||[]).filter(p=>p&&p.enabled).slice(0,3);
+  const ps=(r.prizes||[]).filter(p=>p&&p.enabled);
   const nSec=Math.max(0,ps.length-1), SEC=48;
   const topH=360+nSec*SEC, legendH=120, gridH=cell*10+gap*9, H=topH+gridH+legendH;
   const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
