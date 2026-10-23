@@ -1,0 +1,30 @@
+DREAMS RIFA - App lista para subir
+====================================
+
+QUE TRAE:
+- server.js        -> el servidor (va en la raiz del repo)
+- package.json     -> datos de la app y dependencias
+- public/index.html-> el editor de tableros (lo que usas tu)
+
+COMO PUBLICARLA EN RENDER (deploy manual):
+1. Sube estos 3 elementos a tu repo (server.js, package.json y la carpeta public)
+   reemplazando lo que habia.
+2. En Render, en tu servicio, el comando de build es:   npm install
+   y el comando de inicio es:                           npm start
+3. Haz el deploy manual. Cuando termine, abre la URL de Render y veras el editor.
+
+COMO SE USA:
+- Entras a la pagina y ahi editas todo: nombre de la loteria, fecha, hora,
+  valor, WhatsApp, eslogan, titulo y la imagen/logo.
+- En "Participantes" agregas a la gente con sus numeros y su estado
+  (pago o falta pago). Puedes editar, marcar pago o eliminar cuando quieras.
+- El tablero se pinta solo: numeros pagados con corona, reservados sin pago
+  con el relojito.
+- Pones la hora del sorteo y cuantos minutos antes se liberan los no pagados;
+  el sistema calcula y libera solo los que no pagaron.
+- En "Descargar" bajas la imagen (libre, con reservas o TODOS VENDIDOS) para
+  mandarla por WhatsApp.
+
+IMPORTANTE:
+- No hay pagos ni reservas en linea: todo se coordina por WhatsApp.
+- Al descargar desde Render la imagen baja completa (fondo incluido).
