@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DREAMS RIFA — Tablero</title>
+<style>
+:root{--morado:#7b1fa2;--morado2:#b026ff;--verde:#39ff14;--verde2:#00e676;--oro:#ffd54a;--oro2:#ffb300}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',system-ui,sans-serif}
+body{background:radial-gradient(circle at 50% 0%,#2a0a44,#0d001a 70%);color:#fff;padding:18px;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+.head{text-align:center;margin-bottom:14px}
+.head .n{font-weight:900;font-size:22px;letter-spacing:.5px;text-shadow:0 0 8px var(--verde),0 0 12px var(--morado2)}
+.head .n b{color:var(--oro)}
+.head .s{font-size:12px;color:#cbb8e0;margin-top:3px}
+.poster{width:100%;max-width:460px;border-radius:20px;overflow:hidden;position:relative;box-shadow:0 0 0 5px var(--oro),0 0 34px var(--morado2)}
+.poster .bg{position:relative;padding:12px 12px 14px;background-color:#1a0033;background-size:cover;background-position:top center;background-repeat:no-repeat}
+.poster .bg::before{content:'';position:absolute;left:0;right:0;bottom:0;height:58%;background:linear-gradient(180deg,transparent,rgba(26,0,51,.28) 42%,rgba(26,0,51,.8));z-index:1}
+.ptop{position:relative;z-index:3;display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.logo{height:60px;max-width:130px;border-radius:10px;border:3px solid var(--oro);background:#2a0a44cc;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 0 10px var(--oro2);padding:2px}
+.logo.empty{width:60px;height:60px}
+.logo img{height:100%;max-width:122px;object-fit:contain;display:block;border-radius:6px}
+.logo span{font-size:9px;color:var(--oro);text-align:center;padding:2px}
+.brand{text-align:right}
+.brand .n{font-weight:900;font-size:17px;letter-spacing:.5px;text-shadow:0 0 8px var(--verde),0 0 12px var(--morado2)}
+.brand .n b{color:var(--oro)}
+.brand .wa{display:inline-block;margin-top:5px;background:var(--verde2);color:#06210a;font-weight:800;font-size:11px;padding:4px 9px;border-radius:20px}
+.mascot-space{height:210px;position:relative;z-index:2}
+.ptitle{position:relative;z-index:3;text-align:center;margin:2px 0 8px}
+.stk{display:inline-block;background:linear-gradient(180deg,#ffffff,#ffe9a8);color:#5b2e00;font-weight:900;border:3px solid var(--oro);border-radius:14px;padding:4px 13px;box-shadow:0 3px 0 #0006,0 0 12px var(--oro2);line-height:1.15}
+.stk.lot{font-size:13px;letter-spacing:.3px;transform:rotate(-2deg)}
+.stk.tit{display:block;width:fit-content;margin:6px auto;font-size:18px;color:#7a1f00;background:linear-gradient(180deg,#ffd54a,#ffb300);transform:rotate(1.5deg);text-shadow:0 1px 0 #fff6}
+.stk.slo{font-size:10px;font-style:italic;background:linear-gradient(180deg,#ffffff,#e9d6ff);color:#4a0a5c;transform:rotate(-1.5deg)}
+.stk.free{display:block;width:fit-content;margin:6px auto 0;font-size:15px;background:linear-gradient(180deg,#39ff14,#00c853);color:#06210a;transform:rotate(-2deg);border-color:#fff}
+.grid{position:relative;z-index:3;display:grid;grid-template-columns:repeat(10,1fr);gap:3px;background:#2a0a44cc;padding:7px;border-radius:12px;border:2px solid var(--morado2)}
+.c{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border-radius:5px;background:linear-gradient(180deg,#fff,#e6d6ff);color:#3a0a5c;position:relative;overflow:hidden}
+.c.pago{background:linear-gradient(180deg,var(--morado2),#6a1b9a);color:transparent}
+.c.pago::after{content:'👑';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;filter:drop-shadow(0 0 2px #000)}
+.poster.casino .c.pago{background:linear-gradient(180deg,var(--verde2),#00a152)}
+.c.pend{background:linear-gradient(180deg,#fff3d0,#ffd98a);color:#7a4a00;box-shadow:inset 0 0 0 2px #ff9800}
+.c.pend::before{content:'⏳';position:absolute;top:-2px;right:0;font-size:8px}
+.sold-banner{position:relative;z-index:3;text-align:center;padding:40px 10px;background:#2a0a44cc;border:2px solid var(--morado2);border-radius:12px}
+.sold-banner .t{font-size:36px;font-weight:900;background:linear-gradient(180deg,var(--oro),var(--oro2));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.sold-banner .g{font-size:11px;color:#eadcff;margin-top:6px}
+.vitrina{position:relative;z-index:3;text-align:center;padding:16px 10px;background:#2a0a44cc;border:2px solid var(--oro);border-radius:12px}
+.vitrina .vt{font-size:15px;font-weight:900;color:var(--oro);letter-spacing:1px;margin-bottom:10px;text-shadow:0 0 8px var(--morado2)}
+.vballs{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:8px}
+.vball{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:#3a0a5c;background:radial-gradient(circle at 35% 30%,#fff,#ffd54a 70%,#ffb300);border:3px solid #fff;box-shadow:0 3px 8px #0007,inset 0 -6px 10px #0003}
+.poster.casino .vball{background:radial-gradient(circle at 35% 30%,#fff,#39ff14 70%,#00c853);color:#06210a}
+.vwin{font-size:12px;color:#eadcff;margin-top:4px}
+.vwin b{color:var(--oro)}
+.pbottom{position:relative;z-index:3;display:flex;gap:8px;margin-top:8px;align-items:stretch}
+.pbox{flex:1;background:linear-gradient(180deg,#3a0a5c,#2a0a44);border:2px solid var(--oro);border-radius:10px;padding:6px 8px}
+.pbox .h{font-size:9px;color:var(--oro);font-weight:800;letter-spacing:.5px;margin-bottom:2px}
+.pbox .vv{font-size:16px;font-weight:900;color:#fff;text-shadow:0 0 6px var(--verde)}
+.pbox .dt{font-size:12px;color:#fff;font-weight:700;line-height:1.15}
+.pbox .fh{display:flex;gap:10px}
+.pbox .fh>div{flex:1}
+.libstrip{position:relative;z-index:3;margin-top:8px;text-align:center;background:linear-gradient(90deg,#ff9800,#ff5252);color:#fff;font-weight:800;font-size:11px;padding:6px;border-radius:10px;border:2px solid var(--oro)}
+.prizes{position:relative;z-index:3;margin-top:8px;background:#2a0a44cc;border:2px solid var(--oro);border-radius:12px;padding:8px}
+.prizes .ph{font-size:10px;color:var(--oro);font-weight:800;text-align:center;margin-bottom:6px;letter-spacing:.5px}
+.prizes table{width:100%;border-collapse:collapse}
+.prizes td{padding:4px 6px;font-size:11px;border-bottom:1px solid #ffffff1a}
+.prizes td.lbl{color:#eadcff}.prizes td.val{text-align:right;font-weight:900;color:var(--oro)}
+.foot{margin-top:16px;text-align:center;font-size:11px;color:#9a86c0}
+.foot a{color:var(--oro);text-decoration:none;font-weight:800}
+.empty-msg{margin-top:30px;text-align:center;color:#cbb8e0;font-size:14px}
+</style>
+</head>
+<body>
+<div class="head"><div class="n">DREAMS <b>RIFA</b></div><div class="s">Tablero del sorteo — todo se coordina por WhatsApp</div></div>
+<div id="root"></div>
+<div class="foot">Esta página es solo para ver · se actualiza sola</div>
+<script>
+var FONDOS={casino:"/fondos/fondo_casino.png",safari:"/fondos/fondo_safari.png",astronauta:"/fondos/fondo_astronauta.png",superheroe:"/fondos/fondo_superheroe.png",granjero:"/fondos/fondo_granjero.png",buzo:"/fondos/fondo_buzo.png",esmoquin:"/fondos/fondo_esmoquin.png",f1:"/fondos/fondo_f1.png"};
+var TIPOS=["Dos últimas cifras","Dos primeras cifras","Cifras del medio","Cifras de unión (1ª y última)"];
+function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function parseTime(s){s=(s||'').trim().toUpperCase();var m=s.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/);if(!m)return null;var h=+m[1],mi=+m[2],ap=m[3];if(ap==='PM'&&h<12)h+=12;if(ap==='AM'&&h===12)h=0;return h*60+mi;}
+function fmtTime(t){t=((t%1440)+1440)%1440;var h=Math.floor(t/60),mi=t%60,ap=h>=12?'PM':'AM',hh=h%12;if(hh===0)hh=12;return hh+':'+(mi<10?'0'+mi:mi)+' '+ap;}
+function bgUrl(s){if(s.tema==='custom')return s.customBg||FONDOS.casino;return FONDOS[s.tema]||FONDOS.casino;}
+function stateOf(s,i){var nn=(i<10?'0'+i:''+i),st='';var parts=s.parts||[];for(var k=0;k<parts.length;k++){var arr=parts[k].arr||[];if(arr.indexOf(nn)>-1){if(parts[k].es==='ok')return 'pago';st='pend';}}if(st==='pend'&&s.liberated)return '';return st;}
+function draw(s){
+  var gratis=!!s.gratis, modo=s.modo||'tablero';
+  var lt=null;var hs=parseTime(s.hora);if(hs!==null)lt=hs-(parseInt(s.antes)||0);
+  var lf=lt===null?'--':fmtTime(lt);
+  var mid='';
+  if(modo==='vendidos'){
+    mid='<div class="sold-banner"><div class="t">¡TODOS VENDIDOS!</div><div class="g">GRACIAS POR SER PARTE DE ESTA GRAN FAMILIA 💜</div></div>';
+  } else if(modo==='vitrina'){
+    var res=(s.ganador||'').split(/[^0-9A-Za-z]+/).filter(function(x){return x!==''});
+    var balls=res.map(function(d){return '<div class="vball">'+esc(d)+'</div>'}).join('')||'<div class="vball">?</div>';
+    mid='<div class="vitrina"><div class="vt">🏆 NÚMEROS GANADORES</div><div class="vballs">'+balls+'</div>'+(s.ganadorNom?'<div class="vwin">👑 Felicidades <b>'+esc(s.ganadorNom)+'</b></div>':'')+'</div>';
+  } else {
+    var h='<div class="grid">';for(var i=0;i<100;i++){var nn=(i<10?'0'+i:''+i);var cls=stateOf(s,i);h+='<div class="c'+(cls?' '+cls:'')+'">'+nn+'</div>';}h+='</div>';
+    h+='<div class="libstrip">'+(s.liberated?('✅ NÚMEROS NO PAGADOS LIBERADOS ('+lf+')'):('⏳ LOS NÚMEROS NO PAGADOS SE LIBERAN A LA '+lf))+'</div>';
+    mid=h;
+  }
+  var tr='';var tipos=s.tipos||[],vals=s.vals||[];for(var k=0;k<tipos.length;k++){tr+='<tr><td class="lbl">'+(k+1)+'. '+TIPOS[tipos[k]]+'</td><td class="val">'+esc(vals[k])+'</td></tr>';}
+  var logo=s.logo?('<div class="logo"><img src="'+s.logo+'"></div>'):'<div class="logo empty"><span>Logo lotería</span></div>';
+  var html='<div class="poster'+(s.tema==='casino'?' casino':'')+'"><div class="bg" style="background-image:url(&quot;'+bgUrl(s)+'&quot;)">'
+   +'<div class="ptop">'+logo+'<div class="brand"><div class="n">DREAMS <b>RIFA</b></div><div class="wa">📲 '+esc(s.wa)+'</div></div></div>'
+   +'<div class="mascot-space"></div>'
+   +'<div class="ptitle"><span class="stk lot">'+esc(s.loteria)+'</span><span class="stk tit">'+esc(s.titulo)+'</span><span class="stk slo">'+esc(s.slogan)+'</span>'+(gratis?'<span class="stk free">🎁 ¡SORTEO GRATIS!</span>':'')+'</div>'
+   +mid
+   +'<div class="pbottom"><div class="pbox"><div class="h">VALOR NÚMERO</div><div class="vv">'+(gratis?'¡GRATIS!':esc(s.valor))+'</div></div>'
+   +'<div class="pbox"><div class="fh"><div><div class="h">FECHA</div><div class="dt">'+esc(s.fecha)+'</div></div><div><div class="h">HORA</div><div class="dt">'+esc(s.hora)+'</div></div></div></div></div>'
+   +'<div class="prizes"><div class="ph">🏆 PREMIOS</div><table>'+tr+'</table></div>'
+   +'</div></div>';
+  document.getElementById('root').innerHTML=html;
+}
+function load(){fetch('/api/state').then(function(r){return r.json()}).then(function(d){if(d.ok&&d.estado){draw(d.estado);}else{document.getElementById('root').innerHTML='<div class="empty-msg">Aún no hay un sorteo publicado.<br>Vuelve pronto 😺</div>';}}).catch(function(){});}
+load();setInterval(load,30000);
+</script>
+</body>
+</html>

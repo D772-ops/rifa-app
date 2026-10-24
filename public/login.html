@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DREAMS RIFA — Iniciar sesión</title>
+<style>
+:root{--morado:#7b1fa2;--morado2:#b026ff;--verde:#39ff14;--verde2:#00e676;--oro:#ffd54a;--oro2:#ffb300}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',system-ui,sans-serif}
+body{min-height:100vh;background:radial-gradient(circle at 50% 0%,#2a0a44,#0d001a 70%);color:#fff;display:flex;align-items:center;justify-content:center;padding:18px}
+.card{width:100%;max-width:360px;background:#160029;border:1px solid #ffffff22;border-radius:20px;padding:26px 22px;box-shadow:0 0 0 4px var(--oro),0 0 40px var(--morado2)}
+.logo{text-align:center;margin-bottom:6px;font-size:34px}
+.brand{text-align:center;font-weight:900;font-size:22px;letter-spacing:.5px;text-shadow:0 0 8px var(--verde),0 0 12px var(--morado2);margin-bottom:2px}
+.brand b{color:var(--oro)}
+.sub{text-align:center;font-size:12px;color:#cbb8e0;margin-bottom:18px}
+.field{margin-bottom:13px}
+.field label{display:block;font-size:12px;color:var(--verde);font-weight:800;margin-bottom:5px}
+.field input{width:100%;background:#0d001a;border:1px solid #ffffff33;color:#fff;border-radius:10px;padding:11px 12px;font-size:14px}
+.btn{width:100%;background:linear-gradient(180deg,var(--oro),var(--oro2));color:#3a2500;border:none;font-weight:900;padding:12px;border-radius:10px;cursor:pointer;font-size:15px;margin-top:4px}
+.err{background:#ff525233;border:1px solid #ff5252;color:#ffb3b3;font-size:12px;font-weight:700;padding:9px 10px;border-radius:9px;margin-bottom:14px;text-align:center}
+.hint{text-align:center;font-size:11px;color:#9a86c0;margin-top:16px;line-height:1.5}
+.hint a{color:var(--oro);text-decoration:none;font-weight:800}
+</style>
+</head>
+<body>
+  <form class="card" method="POST" action="/login">
+    <div class="logo">👑🐱</div>
+    <div class="brand">DREAMS <b>RIFA</b></div>
+    <div class="sub">Panel del administrador</div>
+    <div class="err" id="err" style="display:none">Usuario o contraseña incorrectos</div>
+    <div class="field"><label>Usuario</label><input name="usuario" autocomplete="username" required autofocus></div>
+    <div class="field"><label>Contraseña</label><input name="clave" type="password" autocomplete="current-password" required></div>
+    <button class="btn" type="submit">Entrar</button>
+    <div class="hint">¿Solo quieres ver el tablero?<br><a href="/ver">Abrir vista pública →</a></div>
+  </form>
+<script>
+  if(location.search.indexOf('error=1')>-1){document.getElementById('err').style.display='block';}
+</script>
+</body>
+</html>

@@ -9,6 +9,10 @@
 :root{--morado:#7b1fa2;--morado2:#b026ff;--verde:#39ff14;--verde2:#00e676;--oro:#ffd54a;--oro2:#ffb300}
 *{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',system-ui,sans-serif}
 body{background:#0d001a;color:#fff;padding:18px}
+.topbar{max-width:1200px;margin:0 auto 14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.topbar .tb{font-weight:900;font-size:20px;text-shadow:0 0 8px var(--verde),0 0 12px var(--morado2)}
+.topbar .tb b{color:var(--oro)}
+.topbar .acts{display:flex;gap:8px;flex-wrap:wrap}
 .app{display:flex;gap:22px;max-width:1200px;margin:0 auto;flex-wrap:wrap;align-items:flex-start}
 .panel{flex:1;min-width:330px;background:#160029;border:1px solid #ffffff22;border-radius:16px;padding:18px}
 .panel h2{color:var(--oro);font-size:17px;margin-bottom:12px}
@@ -23,10 +27,14 @@ body{background:#0d001a;color:#fff;padding:18px}
 .prz .row2{align-items:flex-end}
 .btn{background:var(--oro);color:#3a2500;border:none;font-weight:800;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px}
 .btn.g{background:var(--verde2);color:#06210a}
+.btn.p{background:var(--morado2);color:#fff}
 .btn.full{width:100%;margin-bottom:7px;text-align:left}
 .hint{font-size:11px;color:#9a86c0;margin-top:4px}
 .calc{font-size:12px;color:var(--oro);font-weight:800;margin-top:4px}
 .sec{display:none}.sec.on{display:block}
+.chk{display:flex;align-items:center;gap:8px;background:#20003a;border:1px solid #ffffff1f;border-radius:10px;padding:10px;margin-bottom:11px}
+.chk input{width:auto}
+.chk label{color:var(--oro);font-weight:800;font-size:13px;margin:0}
 /* ===== PREVIEW POSTER ===== */
 .stage{flex:0 0 460px}
 .poster{width:460px;border-radius:20px;overflow:hidden;position:relative;box-shadow:0 0 0 5px var(--oro),0 0 34px var(--morado2)}
@@ -48,6 +56,7 @@ body{background:#0d001a;color:#fff;padding:18px}
 .stk.lot{font-size:13px;letter-spacing:.3px;transform:rotate(-2deg)}
 .stk.tit{display:block;width:fit-content;margin:6px auto;font-size:18px;color:#7a1f00;background:linear-gradient(180deg,#ffd54a,#ffb300);transform:rotate(1.5deg);text-shadow:0 1px 0 #fff6}
 .stk.slo{font-size:10px;font-style:italic;background:linear-gradient(180deg,#ffffff,#e9d6ff);color:#4a0a5c;transform:rotate(-1.5deg)}
+.stk.free{display:block;width:fit-content;margin:6px auto 0;font-size:15px;background:linear-gradient(180deg,#39ff14,#00c853);color:#06210a;transform:rotate(-2deg);border-color:#fff}
 .grid{position:relative;z-index:3;display:grid;grid-template-columns:repeat(10,1fr);gap:3px;background:#2a0a44cc;padding:7px;border-radius:12px;border:2px solid var(--morado2)}
 .c{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border-radius:5px;background:linear-gradient(180deg,#fff,#e6d6ff);color:#3a0a5c;position:relative;overflow:hidden}
 .c.pago{background:linear-gradient(180deg,var(--morado2),#6a1b9a);color:transparent}
@@ -58,6 +67,14 @@ body{background:#0d001a;color:#fff;padding:18px}
 .sold-banner{position:relative;z-index:3;text-align:center;padding:40px 10px;background:#2a0a44cc;border:2px solid var(--morado2);border-radius:12px}
 .sold-banner .t{font-size:36px;font-weight:900;background:linear-gradient(180deg,var(--oro),var(--oro2));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 .sold-banner .g{font-size:11px;color:#eadcff;margin-top:6px}
+/* vitrina de ganadores */
+.vitrina{position:relative;z-index:3;text-align:center;padding:16px 10px;background:#2a0a44cc;border:2px solid var(--oro);border-radius:12px}
+.vitrina .vt{font-size:15px;font-weight:900;color:var(--oro);letter-spacing:1px;margin-bottom:10px;text-shadow:0 0 8px var(--morado2)}
+.vballs{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:8px}
+.vball{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:#3a0a5c;background:radial-gradient(circle at 35% 30%,#fff,#ffd54a 70%,#ffb300);border:3px solid #fff;box-shadow:0 3px 8px #0007,inset 0 -6px 10px #0003}
+.poster.casino .vball{background:radial-gradient(circle at 35% 30%,#fff,#39ff14 70%,#00c853);color:#06210a}
+.vwin{font-size:12px;color:#eadcff;margin-top:4px}
+.vwin b{color:var(--oro)}
 .pbottom{position:relative;z-index:3;display:flex;gap:8px;margin-top:8px;align-items:stretch}
 .pbox{flex:1;background:linear-gradient(180deg,#3a0a5c,#2a0a44);border:2px solid var(--oro);border-radius:10px;padding:6px 8px}
 .pbox .h{font-size:9px;color:var(--oro);font-weight:800;letter-spacing:.5px;margin-bottom:2px}
@@ -80,9 +97,22 @@ body{background:#0d001a;color:#fff;padding:18px}
 .badge.lib{background:#9e9e9e;color:#111}
 .small{font-size:11px;color:#9a86c0}
 .dlbox{background:#20003a;border:1px solid #ffffff1f;border-radius:12px;padding:12px;margin-top:12px}
+.okmsg{background:#00e67622;border:1px solid var(--verde2);color:#b9ffd0;font-size:12px;font-weight:700;padding:9px 10px;border-radius:9px;margin-top:10px}
+.okmsg a{color:var(--oro);font-weight:800}
+.stkgal{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
+.stkgal a{display:block;border:2px solid var(--oro);border-radius:10px;overflow:hidden;background:#20003a}
+.stkgal img{width:100%;display:block}
+.stkgal .cap{font-size:10px;text-align:center;color:#eadcff;padding:3px}
 </style>
 </head>
 <body>
+<div class="topbar">
+  <div class="tb">👑🐱 DREAMS <b>RIFA</b> — Administrador</div>
+  <div class="acts">
+    <a class="btn g" href="/ver" target="_blank">👁️ Ver vista pública</a>
+    <form method="POST" action="/logout" style="display:inline"><button class="btn" style="background:#333;color:#fff" type="submit">🚪 Cerrar sesión</button></form>
+  </div>
+</div>
 <div class="app">
   <div class="panel" style="flex:1;min-width:360px">
     <h2>⚙️ Panel editable</h2>
@@ -91,13 +121,30 @@ body{background:#0d001a;color:#fff;padding:18px}
       <div class="tab" data-sec="premios">Premios</div>
       <div class="tab" data-sec="parti">Participantes</div>
       <div class="tab" data-sec="descargar">Descargar</div>
+      <div class="tab" data-sec="stickers">Stickers</div>
     </div>
 
     <div class="sec on" id="sec-datos">
       <div class="row2">
-        <div class="field"><label>Tema</label><select id="tema"><option value="rey">👑 Rey</option><option value="casino">🎰 Casino</option></select></div>
-        <div class="field"><label>Modo</label><select id="modo"><option value="tablero">Tablero de números</option><option value="vendidos">TODOS VENDIDOS</option></select></div>
+        <div class="field"><label>Tema (fondo del gatito rey)</label><select id="tema">
+          <option value="casino">🎰 Casino</option>
+          <option value="safari">🌴 Safari</option>
+          <option value="astronauta">🚀 Astronauta</option>
+          <option value="superheroe">🦸 Superhéroe</option>
+          <option value="granjero">🚜 Granjero</option>
+          <option value="buzo">🤿 Buzo</option>
+          <option value="esmoquin">🎩 Esmoquin</option>
+          <option value="f1">🏎️ Fórmula 1</option>
+          <option value="custom">🖼️ Mi propio fondo</option>
+        </select></div>
+        <div class="field"><label>Modo</label><select id="modo">
+          <option value="tablero">Tablero de números</option>
+          <option value="vendidos">TODOS VENDIDOS</option>
+          <option value="vitrina">Vitrina de ganadores</option>
+        </select></div>
       </div>
+      <div class="field" id="bgCustomWrap" style="display:none"><label>Sube tu fondo temático propio (para este sorteo)</label><input type="file" id="bgfile" accept="image/*" class="small"><div class="hint">Se usa solo cuando el tema es “Mi propio fondo”. Ideal vertical.</div></div>
+      <div class="chk"><input type="checkbox" id="gratis"><label for="gratis">🎁 Sorteo GRATIS (muestra el sticker de regalo y pone el valor en ¡GRATIS!)</label></div>
       <div class="field"><label>Nombre de la lotería</label><input id="loteria" value="LOTERÍA EL SINUANO NOCHE"></div>
       <div class="row2">
         <div class="field"><label>Fecha del sorteo</label><input id="fecha" value="23 OCT 2026"></div>
@@ -109,6 +156,11 @@ body{background:#0d001a;color:#fff;padding:18px}
       <div class="field"><label>Eslogan (sticker)</label><input id="slogan" value="Pequeños números, grandes sueños"></div>
       <div class="field"><label>Título / premio destacado (sticker)</label><input id="titulo" value="GRAN SORTEO DIARIO $730.000"></div>
       <div class="field"><label>Imagen de la lotería (URL o subir)</label><input id="logourl" placeholder="pega URL o usa el botón"><input type="file" id="logofile" accept="image/*" class="small" style="margin-top:5px"><div class="hint">El cuadro se adapta a la forma de tu imagen.</div></div>
+      <div class="field" id="vitrinaWrap" style="display:none">
+        <label>Números ganadores (vitrina)</label><input id="ganador" value="0 4 2 2" placeholder="Ej: 0 4 2 2">
+        <label style="margin-top:8px">Nombre del ganador (opcional)</label><input id="ganadorNom" placeholder="Ej: María Pérez">
+        <div class="hint">Pon aquí el resultado. Se verá en bolas doradas con el tema elegido.</div>
+      </div>
     </div>
 
     <div class="sec" id="sec-premios">
@@ -138,11 +190,23 @@ body{background:#0d001a;color:#fff;padding:18px}
         <button class="btn g full" onclick="dl('libre')">⬇️ Boletas totalmente libres</button>
         <button class="btn full" onclick="dl('reserva')">⬇️ Tablero con reservas actuales</button>
         <button class="btn full" style="background:var(--morado2);color:#fff" onclick="dl('vendidos')">⬇️ TODOS VENDIDOS</button>
+        <button class="btn full" style="background:#ffb300" onclick="dl('vitrina')">⬇️ Vitrina de ganadores</button>
         <div class="hint">Genera un PNG del tablero tal como se ve en la vista previa.</div>
       </div>
+      <div class="dlbox">
+        <div class="small" style="margin-bottom:10px">Publica el tablero para que la gente lo vea (vista pública de solo lectura):</div>
+        <button class="btn p full" id="pubBtn">📢 Guardar y publicar</button>
+        <div class="okmsg" id="pubMsg" style="display:none"></div>
+        <div class="hint">La gente abre el enlace público y ve el afiche actual, pero NO puede editar nada.</div>
+      </div>
+    </div>
+
+    <div class="sec" id="sec-stickers">
+      <div class="small" style="margin-bottom:6px">Stickers del gatito rey para WhatsApp. Toca uno para abrirlo y descargarlo:</div>
+      <div class="stkgal" id="stkgal"></div>
+      <div class="hint">Para convertirlos en stickers de WhatsApp, usa una app de stickers (Sticker.ly, Wsticker, etc.) y quítale el fondo si quieres.</div>
     </div>
   </div>
-
   <div class="stage">
     <div class="panel" style="padding:12px">
       <h2 style="margin-bottom:8px">👀 Vista previa</h2>
@@ -157,6 +221,7 @@ body{background:#0d001a;color:#fff;padding:18px}
             <span class="stk lot" id="vLot">LOTERÍA EL SINUANO NOCHE</span>
             <span class="stk tit" id="vTit">GRAN SORTEO DIARIO $730.000</span>
             <span class="stk slo" id="vSlo">Pequeños números, grandes sueños</span>
+            <span class="stk free" id="vFree" style="display:none">🎁 ¡SORTEO GRATIS!</span>
           </div>
           <div id="gridWrap"></div>
           <div class="libstrip" id="vLibStrip"></div>
@@ -170,43 +235,70 @@ body{background:#0d001a;color:#fff;padding:18px}
     </div>
   </div>
 </div>
-
 <script>
-var FONDOS={rey:"https://storage.googleapis.com/ot-pt/code_agent/nano2_image_editing/2026-10-24/595ebd203781/fondo_rey.png?Expires=1795381525&GoogleAccessId=gcs-owner%40oreateai-434511.iam.gserviceaccount.com&Signature=NbKhR8LHqbMELJ4G%2FUoT9AePjzD7FxXG81zJI10tXUKUiQRdbu0FVk%2F%2BJtucbOWNQ8hJgQrZ0rxivxFW%2BC1IVas%2FEHzp2i%2FhGkCsFa3zoHnMKrFZMQS9rTP0XUNK1Lq2lYuLsIlRuf%2F2ngRNbnRtGJVPk647AOAuhAOejT7aYuyt%2FGC0Oj2F9dF31sddkV5B6RaIIYhzgw5OGleiWtqnMOqCafhGcGw%2BS8HUVnveo63mkO7uoGyXRpx3Vpm7b26wtw7ma1b%2BCtUtjsrMRdPXXqGugfQz2y01ilT1UxsZHEtYGGmeEeswSZZiAd%2F37hKSS2IZGx8RPHAqAXXDFO2QPg%3D%3D"};FONDOS.casino=FONDOS.rey;
+var FONDOS={
+  casino:"/fondos/fondo_casino.png",
+  safari:"/fondos/fondo_safari.png",
+  astronauta:"/fondos/fondo_astronauta.png",
+  superheroe:"/fondos/fondo_superheroe.png",
+  granjero:"/fondos/fondo_granjero.png",
+  buzo:"/fondos/fondo_buzo.png",
+  esmoquin:"/fondos/fondo_esmoquin.png",
+  f1:"/fondos/fondo_f1.png"
+};
+var STICKERS=[
+  ['sticker_sorteo_gratis.png','Sorteo gratis'],
+  ['sticker_esperando_pagos.png','Esperando pagos'],
+  ['sticker_corre_reloj.png','Corre el reloj'],
+  ['sticker_no_te_lo_pierdas.png','No te lo pierdas'],
+  ['sticker_ya_pago.png','Ya pagó'],
+  ['sticker_ultimos_numeros.png','Últimos números'],
+  ['sticker_todos_vendidos.png','Todos vendidos']
+];
 var TIPOS=["Dos últimas cifras","Dos primeras cifras","Cifras del medio","Cifras de unión (1ª y última)"];
 var parts=[], liberated=false, FORCE=null, editIdx=null;
+var customBg=null, logoSrc=null;
 var $=function(id){return document.getElementById(id)};
 
 function parseTime(s){s=(s||'').trim().toUpperCase();var m=s.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/);if(!m)return null;var h=+m[1],mi=+m[2],ap=m[3];if(ap==='PM'&&h<12)h+=12;if(ap==='AM'&&h===12)h=0;return h*60+mi;}
 function fmtTime(t){t=((t%1440)+1440)%1440;var h=Math.floor(t/60),mi=t%60,ap=h>=12?'PM':'AM',hh=h%12;if(hh===0)hh=12;return hh+':'+(mi<10?'0'+mi:mi)+' '+ap;}
 function libTime(){var hs=parseTime($('hora').value);if(hs===null)return null;var a=parseInt($('antes').value)||0;return hs-a;}
 function parseNums(str){return (str||'').split(/[^0-9]+/).filter(function(x){return x!==''}).map(function(x){x=parseInt(x);return (x<10?'0'+x:''+x)});}
+function bgUrl(){var t=$('tema').value;if(t==='custom')return customBg||FONDOS.casino;return FONDOS[t]||FONDOS.casino;}
 
 document.querySelectorAll('.tab').forEach(function(t){t.onclick=function(){document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on')});t.classList.add('on');document.querySelectorAll('.sec').forEach(function(s){s.classList.remove('on')});$('sec-'+t.dataset.sec).classList.add('on');};});
 
 function buildPrz(){var n=parseInt($('nprz').value);var box=$('przbox');box.innerHTML='';for(var i=0;i<n;i++){var def=['$30.000','$100.000','$100.000','$500.000'][i]||'$0';var opts=TIPOS.map(function(tp,j){return '<option value="'+j+'"'+(j==i?' selected':'')+'>'+tp+'</option>'}).join('');box.innerHTML+='<div class="prz"><div class="row2"><div class="field" style="margin:0"><label>Premio '+(i+1)+' · tipo</label><select class="ptipo">'+opts+'</select></div><div class="field" style="margin:0"><label>Valor</label><input class="pvalor" value="'+def+'"></div></div></div>';}box.querySelectorAll('.ptipo,.pvalor').forEach(function(e){e.oninput=render;e.onchange=render});render();}
 
 function stateOf(i){var nn=(i<10?'0'+i:''+i);var st='';for(var k=0;k<parts.length;k++){if(parts[k].arr.indexOf(nn)>-1){if(parts[k].es==='ok')return 'pago';st='pend';}}if(st==='pend'&&liberated)return '';return st;}
-
 function render(){
-  var tema=$('tema').value, modo=(FORCE&&FORCE.mode)||$('modo').value;
+  var tema=$('tema').value, modo=(FORCE&&FORCE.mode)||$('modo').value, gratis=$('gratis').checked;
   var p=$('poster'); p.className='poster'+(tema=='casino'?' casino':'');
-  p.querySelector('.bg').style.backgroundImage='url("'+FONDOS[tema]+'")';
+  p.querySelector('.bg').style.backgroundImage='url("'+bgUrl()+'")';
   $('vLot').textContent=$('loteria').value;
   $('vTit').textContent=$('titulo').value;
   $('vSlo').textContent=$('slogan').value;
-  $('vVal').textContent=$('valor').value;
+  $('vVal').textContent=gratis?'¡GRATIS!':$('valor').value;
   $('vFec').textContent=$('fecha').value;
   $('vHor').textContent=$('hora').value;
   $('vWa').textContent='📲 '+$('wa').value;
+  $('vFree').style.display=gratis?'block':'none';
   var lt=libTime();
   var lf=lt===null?'--':fmtTime(lt);
-  $('libCalc').textContent=lt===null?'⚠️ Revisa la hora del sorteo (ej: 2:30 PM)':('➔ Se liberan a la '+lf);
-  $('vLibStrip').innerHTML=liberated?('✅ NúMEROS NO PAGADOS LIBERADOS ('+lf+')'):('⏳ LOS NÚMEROS NO PAGADOS SE LIBERAN A LA '+lf);
-  var gw=$('gridWrap');
+  $('libCalc').textContent=lt===null?'⚠️ Revisa la hora del sorteo (ej: 2:30 PM)':('➜ Se liberan a la '+lf);
+  var gw=$('gridWrap'), strip=$('vLibStrip');
   if(modo=='vendidos'){
+    strip.style.display='none';
     gw.innerHTML='<div class="sold-banner"><div class="t">¡TODOS VENDIDOS!</div><div class="g">GRACIAS POR SER PARTE DE ESTA GRAN FAMILIA 💜</div></div>';
+  } else if(modo=='vitrina'){
+    strip.style.display='none';
+    var res=($('ganador').value||'').split(/[^0-9A-Za-z]+/).filter(function(x){return x!==''});
+    var balls=res.map(function(d){return '<div class="vball">'+d+'</div>'}).join('');
+    var nom=$('ganadorNom').value.trim();
+    gw.innerHTML='<div class="vitrina"><div class="vt">🏆 NÚMEROS GANADORES</div><div class="vballs">'+(balls||'<div class="vball">?</div>')+'</div>'+(nom?'<div class="vwin">👑 Felicidades <b>'+nom+'</b></div>':'')+'</div>';
   } else {
+    strip.style.display='block';
+    $('vLibStrip').innerHTML=liberated?('✅ NÚMEROS NO PAGADOS LIBERADOS ('+lf+')'):('⏳ LOS NÚMEROS NO PAGADOS SE LIBERAN A LA '+lf);
     var forceEmpty=FORCE&&FORCE.empty;
     var h='<div class="grid">';
     for(var i=0;i<100;i++){var nn=(i<10?'0'+i:''+i);var cls=forceEmpty?'':stateOf(i);h+='<div class="c'+(cls?' '+cls:'')+'">'+nn+'</div>';}
@@ -215,13 +307,18 @@ function render(){
   var tr='';var tipos=document.querySelectorAll('.ptipo'),vals=document.querySelectorAll('.pvalor');
   for(var k=0;k<tipos.length;k++){tr+='<tr><td class="lbl">'+(k+1)+'. '+TIPOS[tipos[k].value]+'</td><td class="val">'+vals[k].value+'</td></tr>';}
   $('vPrz').innerHTML=tr;
+  $('bgCustomWrap').style.display=(tema==='custom')?'block':'none';
+  $('vitrinaWrap').style.display=(modo==='vitrina'&&!(FORCE&&FORCE.mode))?'block':'none';
 }
 
 $('logoBox').onclick=function(){$('logofile').click()};
 $('logofile').onchange=function(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){setLogo(r.result)};r.readAsDataURL(f)};
 $('logourl').oninput=function(){if($('logourl').value)setLogo($('logourl').value)};
-function setLogo(src){$('logoBox').classList.remove('empty');$('logoBox').innerHTML='<img src="'+src+'" crossorigin="anonymous">'}
+function setLogo(src){logoSrc=src;$('logoBox').classList.remove('empty');$('logoBox').innerHTML='<img src="'+src+'" crossorigin="anonymous">'}
+$('bgfile').onchange=function(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){customBg=r.result;render()};r.readAsDataURL(f)};
 
+// galeria de stickers
+(function(){var g=$('stkgal');g.innerHTML=STICKERS.map(function(s){return '<a href="/stickers/'+s[0]+'" target="_blank" download><img src="/stickers/'+s[0]+'"><div class="cap">'+s[1]+'</div></a>'}).join('');})();
 $('addP').onclick=function(){var n=$('pNombre').value.trim(),nums=$('pNums').value.trim(),es=$('pEstado').value;if(!n)return;if(editIdx!==null){parts[editIdx]={n:n,nums:nums,arr:parseNums(nums),es:es};editIdx=null;$('addP').textContent='+ Agregar';$('addP').style.background='';$('editMsg').style.display='none';}else{parts.push({n:n,nums:nums,arr:parseNums(nums),es:es});}$('pNombre').value='';$('pNums').value='';$('pEstado').value='ok';drawP();render();};
 function startEdit(idx){var p=parts[idx];$('pNombre').value=p.n;$('pNums').value=p.nums||'';$('pEstado').value=p.es;editIdx=idx;$('addP').textContent='💾 Guardar cambios';$('addP').style.background='#ff9800';$('editMsg').style.display='block';$('editMsg').textContent='✏️ Editando a '+p.n+' — cambia números o estado y pulsa Guardar.';$('pNombre').focus();}
 function drawP(){var tb=$('plist').querySelector('tbody');tb.innerHTML='';parts.forEach(function(p,idx){var b;if(p.es==='ok')b='<span class="badge ok">Pago ✓</span>';else b=liberated?'<span class="badge lib">Liberado</span>':'<span class="badge no">Falta pago</span>';var payBtn=p.es==='ok'?'<button class="btn" data-p="'+idx+'" title="Marcar falta pago" style="padding:3px 7px;background:#ff5252;color:#fff">↩ pago</button>':'<button class="btn" data-p="'+idx+'" title="Marcar como pago" style="padding:3px 7px;background:var(--verde2);color:#06210a">✓ pago</button>';tb.innerHTML+='<tr><td>'+p.n+'</td><td>'+(p.nums||'-')+'</td><td>'+b+'</td><td style="white-space:nowrap"><button class="btn" data-e="'+idx+'" title="Editar" style="padding:3px 7px;background:#ffd54a">✏️</button> '+payBtn+' <button class="btn" data-d="'+idx+'" title="Eliminar" style="padding:3px 7px;background:#333;color:#fff">✕</button></td></tr>';});tb.querySelectorAll('button[data-e]').forEach(function(x){x.onclick=function(){startEdit(+x.dataset.e);}});tb.querySelectorAll('button[data-p]').forEach(function(x){x.onclick=function(){var i=+x.dataset.p;parts[i].es=parts[i].es==='ok'?'no':'ok';drawP();render();}});tb.querySelectorAll('button[data-d]').forEach(function(x){x.onclick=function(){var i=+x.dataset.d;if(editIdx===i){editIdx=null;$('addP').textContent='+ Agregar';$('addP').style.background='';$('editMsg').style.display='none';}parts.splice(i,1);drawP();render();}});var sinpago=parts.filter(function(p){return p.es==='no'}).length;$('pcount').textContent=parts.length+' participante(s) · '+sinpago+' sin pago'+(liberated?' (ya liberados)':'');}
@@ -229,13 +326,54 @@ function drawP(){var tb=$('plist').querySelector('tbody');tb.innerHTML='';parts.
 $('expP').onclick=function(){var csv='Nombre,Numeros,Estado\n'+parts.map(function(p){return '"'+p.n+'","'+(p.nums||'')+'",'+(p.es==='ok'?'Pago':(liberated?'Liberado':'Falta pago'))}).join('\n');var a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='participantes.csv';a.click();};
 $('simLib').onclick=function(){liberated=!liberated;this.textContent=liberated?'↩️ Deshacer liberación':'⏱️ Simular hora de liberación';drawP();render();};
 
-function dl(kind){if(kind==='libre')FORCE={mode:'tablero',empty:true};else if(kind==='reserva')FORCE={mode:'tablero',empty:false};else FORCE={mode:'vendidos'};render();setTimeout(function(){html2canvas($('poster'),{useCORS:true,scale:2,backgroundColor:null}).then(function(cv){var a=document.createElement('a');a.href=cv.toDataURL('image/png');a.download='dreams_rifa_'+kind+'.png';a.click();FORCE=null;render();}).catch(function(){FORCE=null;render();alert('Si no descarga la imagen de fondo es por permisos (CORS) del navegador. En la app final quedará resuelto.');});},120);}
+function dl(kind){if(kind==='libre')FORCE={mode:'tablero',empty:true};else if(kind==='reserva')FORCE={mode:'tablero',empty:false};else if(kind==='vitrina')FORCE={mode:'vitrina'};else FORCE={mode:'vendidos'};render();setTimeout(function(){html2canvas($('poster'),{useCORS:true,scale:2,backgroundColor:null}).then(function(cv){var a=document.createElement('a');a.href=cv.toDataURL('image/png');a.download='dreams_rifa_'+kind+'.png';a.click();FORCE=null;render();}).catch(function(){FORCE=null;render();alert('Si no descarga la imagen de fondo es por permisos del navegador. Intenta de nuevo.');});},140);}
+function collectState(){
+  var tipos=[].map.call(document.querySelectorAll('.ptipo'),function(e){return e.value});
+  var vals=[].map.call(document.querySelectorAll('.pvalor'),function(e){return e.value});
+  return {
+    tema:$('tema').value,modo:$('modo').value,gratis:$('gratis').checked,
+    loteria:$('loteria').value,fecha:$('fecha').value,hora:$('hora').value,antes:$('antes').value,
+    valor:$('valor').value,wa:$('wa').value,slogan:$('slogan').value,titulo:$('titulo').value,
+    ganador:$('ganador').value,ganadorNom:$('ganadorNom').value,
+    logo:logoSrc,customBg:customBg,nprz:$('nprz').value,tipos:tipos,vals:vals,
+    parts:parts,liberated:liberated,ts:Date.now()
+  };
+}
+function applyState(s){
+  if(!s)return;
+  $('tema').value=s.tema||'casino';$('modo').value=s.modo||'tablero';$('gratis').checked=!!s.gratis;
+  $('loteria').value=s.loteria||'';$('fecha').value=s.fecha||'';$('hora').value=s.hora||'';$('antes').value=s.antes||'0';
+  $('valor').value=s.valor||'';$('wa').value=s.wa||'';$('slogan').value=s.slogan||'';$('titulo').value=s.titulo||'';
+  $('ganador').value=s.ganador||'';$('ganadorNom').value=s.ganadorNom||'';
+  if(s.customBg){customBg=s.customBg;}
+  if(s.logo){setLogo(s.logo);}
+  $('nprz').value=s.nprz||'4';buildPrz();
+  var tipos=document.querySelectorAll('.ptipo'),vals=document.querySelectorAll('.pvalor');
+  if(s.tipos)s.tipos.forEach(function(v,i){if(tipos[i])tipos[i].value=v});
+  if(s.vals)s.vals.forEach(function(v,i){if(vals[i])vals[i].value=v});
+  parts=(s.parts||[]).map(function(p){return {n:p.n,nums:p.nums,arr:p.arr||parseNums(p.nums),es:p.es}});
+  liberated=!!s.liberated;
+  drawP();render();
+}
+$('pubBtn').onclick=function(){
+  var btn=this;btn.textContent='Publicando...';
+  fetch('/api/state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({estado:collectState()})})
+    .then(function(r){return r.json()}).then(function(d){
+      btn.textContent='📢 Guardar y publicar';
+      var m=$('pubMsg');m.style.display='block';
+      if(d.ok){m.innerHTML='✅ ¡Publicado! La gente puede verlo aquí: <a href="/ver" target="_blank">'+location.origin+'/ver</a>';}
+      else{m.innerHTML='⚠️ No se pudo publicar. Vuelve a iniciar sesión e intenta otra vez.';}
+    }).catch(function(){btn.textContent='📢 Guardar y publicar';var m=$('pubMsg');m.style.display='block';m.innerHTML='⚠️ Error de conexión al publicar.';});
+};
 
-['tema','modo','loteria','fecha','hora','antes','valor','wa','slogan','titulo'].forEach(function(id){$(id).oninput=render;$(id).onchange=render;});
+['tema','modo','gratis','loteria','fecha','hora','antes','valor','wa','slogan','titulo','ganador','ganadorNom'].forEach(function(id){$(id).oninput=render;$(id).onchange=render;});
 $('nprz').onchange=buildPrz;
-// auto-liberación por reloj real
+// auto-liberacion por reloj real
 setInterval(function(){var lt=libTime();if(lt===null||liberated)return;var d=new Date();var now=d.getHours()*60+d.getMinutes();if(now>=lt&&now<lt+180){liberated=true;drawP();render();}},20000);
+
 buildPrz();render();drawP();
+// cargar lo ultimo publicado (si existe) para seguir editando
+fetch('/api/state').then(function(r){return r.json()}).then(function(d){if(d.ok&&d.estado)applyState(d.estado);}).catch(function(){});
 </script>
 </body>
 </html>
