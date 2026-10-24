@@ -1,7 +1,7 @@
 {
   "name": "dreams-rifa",
-  "version": "1.0.0",
-  "description": "DREAMS RIFA - editor de tableros de rifa (todo por WhatsApp)",
+  "version": "2.0.0",
+  "description": "DREAMS RIFA - editor de tableros de rifa con login de administrador y vista publica (todo por WhatsApp)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -10,6 +10,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "express": "4.19.2"
+    "express": "4.19.2",
+    "express-session": "1.18.0"
   }
 }

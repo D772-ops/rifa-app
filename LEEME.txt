@@ -1,30 +1,97 @@
-DREAMS RIFA - App lista para subir
-====================================
+============================================================
+  DREAMS RIFA  —  App lista para subir (versión 2)
+  Ahora con: login de administrador + vista pública +
+  8 fondos del gatito rey + vitrina de ganadores +
+  sorteo gratis + stickers para WhatsApp.
+============================================================
 
-QUE TRAE:
-- server.js        -> el servidor (va en la raiz del repo)
-- package.json     -> datos de la app y dependencias
-- public/index.html-> el editor de tableros (lo que usas tu)
+-------------------------------------------------
+1) QUÉ TRAE LA CARPETA
+-------------------------------------------------
+- server.js            -> el servidor (va en la RAÍZ del repo)
+- package.json         -> datos y dependencias (va en la RAÍZ)
+- public/              -> la página (va tal cual)
+    - index.html       -> el editor (SOLO lo ve el administrador)
+    - login.html       -> pantalla de inicio de sesión
+    - view.html        -> vista PÚBLICA de solo lectura (/ver)
+    - fondos/          -> los 8 fondos del gatito rey
+    - stickers/        -> los stickers del gatito rey para WhatsApp
 
-COMO PUBLICARLA EN RENDER (deploy manual):
-1. Sube estos 3 elementos a tu repo (server.js, package.json y la carpeta public)
-   reemplazando lo que habia.
-2. En Render, en tu servicio, el comando de build es:   npm install
-   y el comando de inicio es:                           npm start
-3. Haz el deploy manual. Cuando termine, abre la URL de Render y veras el editor.
+OJO: sube la carpeta "public" COMPLETA (con fondos y stickers
+adentro). Son las imágenes del gatito, ya vienen incluidas.
 
-COMO SE USA:
-- Entras a la pagina y ahi editas todo: nombre de la loteria, fecha, hora,
-  valor, WhatsApp, eslogan, titulo y la imagen/logo.
-- En "Participantes" agregas a la gente con sus numeros y su estado
-  (pago o falta pago). Puedes editar, marcar pago o eliminar cuando quieras.
-- El tablero se pinta solo: numeros pagados con corona, reservados sin pago
-  con el relojito.
-- Pones la hora del sorteo y cuantos minutos antes se liberan los no pagados;
-  el sistema calcula y libera solo los que no pagaron.
-- En "Descargar" bajas la imagen (libre, con reservas o TODOS VENDIDOS) para
-  mandarla por WhatsApp.
+-------------------------------------------------
+2) CÓMO SUBIRLO A TU REPO
+-------------------------------------------------
+Reemplaza en tu repositorio lo que tenías antes por estos
+elementos: server.js, package.json y la carpeta public.
+(No borres nada de la carpeta public: los fondos y stickers
+deben ir dentro.)
 
-IMPORTANTE:
-- No hay pagos ni reservas en linea: todo se coordina por WhatsApp.
-- Al descargar desde Render la imagen baja completa (fondo incluido).
+-------------------------------------------------
+3) CÓMO PUBLICAR EN RENDER (deploy manual)
+-------------------------------------------------
+En tu servicio de Render:
+- Comando de build:   npm install
+- Comando de inicio:  npm start
+Haz el deploy manual. Cuando termine, abre la URL de Render.
+
+-------------------------------------------------
+4) USUARIO Y CONTRASEÑA (MUY IMPORTANTE)
+-------------------------------------------------
+La contraseña NO está escrita en la página. Se guarda en
+Render como "variables de entorno". Así nadie la ve en el
+código.
+
+En Render, entra a tu servicio -> pestaña "Environment" ->
+"Add Environment Variable" y crea estas tres:
+
+    ADMIN_USER       ->  el usuario que tú quieras (ej: dreams)
+    ADMIN_PASS       ->  la contraseña que tú quieras (ej: MiClave123)
+    SESSION_SECRET   ->  cualquier texto largo e inventado
+                         (ej: dreams-rifa-xk92-secreto)
+
+Guarda y vuelve a hacer deploy. Listo.
+
+Si NO pones estas variables, la app usa por defecto:
+    usuario:  admin
+    clave:    dreams2026
+(Te recomendamos cambiarlas de una vez por las tuyas.)
+
+-------------------------------------------------
+5) CÓMO SE USA
+-------------------------------------------------
+- Abres la URL de Render: te pide usuario y contraseña.
+  Solo tú (el administrador) puedes entrar a editar.
+- Adentro editas todo igual que antes: nombre, fecha, hora,
+  valor, WhatsApp, eslogan, título, logo, premios y
+  participantes (agregar, editar, marcar pago, eliminar, CSV).
+- TEMA: eliges entre los 8 gatitos (Casino, Safari,
+  Astronauta, Superhéroe, Granjero, Buzo, Esmoquin, Fórmula 1).
+  También puedes elegir "Mi propio fondo" y subir tu imagen.
+- MODO: Tablero de números / TODOS VENDIDOS / Vitrina de
+  ganadores (ahí pones los números ganadores y sale en bolas).
+- SORTEO GRATIS: marca la casilla y el afiche muestra el
+  sticker de regalo y el valor queda en "¡GRATIS!".
+- DESCARGAR: bajas el PNG (libre, con reservas, TODOS
+  VENDIDOS o la Vitrina) para mandarlo por WhatsApp.
+- STICKERS: en la pestaña "Stickers" tienes los del gatito
+  rey listos para descargar y usar en WhatsApp.
+
+-------------------------------------------------
+6) VISTA PÚBLICA (para que la gente mire)
+-------------------------------------------------
+- En la pestaña "Descargar" pulsa "Guardar y publicar".
+- Compártele a la gente el enlace:   TU-URL-DE-RENDER/ver
+- Ahí ven el afiche actual pero NO pueden editar nada.
+- Cada vez que cambies algo, vuelve a pulsar "Guardar y
+  publicar" para que se actualice.
+
+-------------------------------------------------
+7) IMPORTANTE
+-------------------------------------------------
+- No hay pagos ni reservas en línea: todo se coordina por
+  WhatsApp. La app solo arma el tablero y la imagen.
+- Para cerrar sesión usa el botón "Cerrar sesión" arriba.
+- Los fondos y stickers ya vienen incluidos en el proyecto,
+  no tienes que subir nada aparte.
